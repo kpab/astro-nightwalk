@@ -56,12 +56,21 @@ function applyMeshShadows(mesh: THREE.Mesh): THREE.Mesh {
 }
 
 /**
+ * 位置情報のインターフェース
+ */
+interface Position3D {
+  x?: number;
+  y?: number;
+  z?: number;
+}
+
+/**
  * ビルディングメッシュを作成するヘルパー関数
  */
 function createBuildingMesh(
   geometry: THREE.BoxGeometry,
   material: THREE.Material,
-  position?: { x?: number; y?: number; z?: number }
+  position?: Position3D
 ): THREE.Mesh {
   const mesh = new THREE.Mesh(geometry, material);
   if (position) {

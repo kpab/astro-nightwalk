@@ -1,7 +1,7 @@
 ---
 // PageHero.astro - 各ページ用の共通ヒーローセクション
 interface Props {
-  title: string;
+  title?: string;
   description?: string;
   backLink?: {
     href: string;
@@ -26,7 +26,9 @@ const { title, description, backLink, containerClass = 'container mx-auto px-4' 
         {backLink.label}
       </a>
     )}
-    <h1 class="text-4xl md:text-5xl font-bold text-white mb-6">{title}</h1>
+    {title && (
+      <h1 class="text-4xl md:text-5xl font-bold text-white mb-6">{title}</h1>
+    )}
     {description && (
       <p class="text-xl text-white/80 max-w-2xl">
         {description}

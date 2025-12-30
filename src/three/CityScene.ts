@@ -7,18 +7,23 @@ import * as THREE from 'three';
 import { skylineConfig } from '../config/skyline.config';
 import { generateCityscape } from './buildings';
 import { setupSkyEnvironment } from './sky';
+import {
+  detectMobileDevice,
+  getOptimalPixelRatio,
+  createVisibilityObserver,
+  disposeResources,
+  measureFPS,
+  adjustRendererQuality,
+} from './performance';
 
 let scene: THREE.Scene;
 let camera: THREE.PerspectiveCamera;
 let renderer: THREE.WebGLRenderer;
 let animationId: number;
-
-/**
- * モバイルデバイスかどうかを判定
- */
-function isMobileDevice(): boolean {
-  return window.innerWidth < 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-}
+let isVisible = true;
+let visibilityObserver: IntersectionObserver | null = null;
+let frameCounter = 0;
+const FPS_CHECK_INTERVAL = 60; // 60フレームごとにFPSをチェック
 
 /**
  * 街並みシーンを初期化
@@ -27,15 +32,15 @@ export function initCityScene(canvas: HTMLCanvasElement, container: HTMLElement)
   // WebGLサポートチェック
   if (!isWebGLSupported()) {
     console.warn('WebGL is not supported');
+    showFallback(container);
     return;
   }
 
-  const isMobile = isMobileDevice();
+  const isMobile = detectMobileDevice();
   const config = skylineConfig;
 
   // シーン作成
   scene = new THREE.Scene();
-  // 背景は空のシェーダーで描画するため、ここでは設定しない
 
   // 空と太陽を作成
   setupSkyEnvironment(scene);
@@ -52,15 +57,19 @@ export function initCityScene(canvas: HTMLCanvasElement, container: HTMLElement)
   camera.lookAt(config.camera.lookAt.x, config.camera.lookAt.y, config.camera.lookAt.z);
 
   // レンダラー設定
-  const pixelRatio = isMobile ? config.performance.mobilePixelRatio : config.performance.desktopPixelRatio;
+  const pixelRatio = getOptimalPixelRatio(isMobile);
   renderer = new THREE.WebGLRenderer({
     canvas,
-    antialias: !isMobile, // モバイルではアンチエイリアス無効
+    antialias: !isMobile,
     alpha: false,
     powerPreference: isMobile ? 'low-power' : 'high-performance',
   });
   renderer.setSize(container.clientWidth, container.clientHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, pixelRatio));
+  renderer.setPixelRatio(pixelRatio);
+
+  // トーンマッピング（よりリアルな色調）
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.0;
 
   // ライティング設定
   setupLighting(scene, config);
@@ -69,8 +78,22 @@ export function initCityScene(canvas: HTMLCanvasElement, container: HTMLElement)
   generateCityscape(scene, isMobile);
 
   // リサイズハンドラ
-  const resizeHandler = () => handleResize(container);
+  const resizeHandler = debounce(() => handleResize(container, isMobile), 100);
   window.addEventListener('resize', resizeHandler);
+
+  // Visibility Observer（画面外では描画を停止）
+  visibilityObserver = createVisibilityObserver(
+    container,
+    () => {
+      isVisible = true;
+      if (!animationId) {
+        animate();
+      }
+    },
+    () => {
+      isVisible = false;
+    }
+  );
 
   // アニメーションループ開始
   animate();
@@ -105,7 +128,7 @@ function setupLighting(scene: THREE.Scene, config: typeof skylineConfig): void {
 /**
  * リサイズ処理
  */
-function handleResize(container: HTMLElement): void {
+function handleResize(container: HTMLElement, isMobile: boolean): void {
   const width = container.clientWidth;
   const height = container.clientHeight;
 
@@ -113,13 +136,30 @@ function handleResize(container: HTMLElement): void {
   camera.updateProjectionMatrix();
 
   renderer.setSize(width, height);
+  renderer.setPixelRatio(getOptimalPixelRatio(isMobile));
 }
 
 /**
  * アニメーションループ
  */
 function animate(): void {
+  if (!isVisible) {
+    animationId = 0;
+    return;
+  }
+
   animationId = requestAnimationFrame(animate);
+
+  // FPS計測と品質調整
+  frameCounter++;
+  if (frameCounter >= FPS_CHECK_INTERVAL) {
+    const fps = measureFPS();
+    if (fps < 50) {
+      adjustRendererQuality(renderer, 60);
+    }
+    frameCounter = 0;
+  }
+
   renderer.render(scene, camera);
 }
 
@@ -129,6 +169,16 @@ function animate(): void {
 export function disposeCityScene(): void {
   if (animationId) {
     cancelAnimationFrame(animationId);
+    animationId = 0;
+  }
+
+  if (visibilityObserver) {
+    visibilityObserver.disconnect();
+    visibilityObserver = null;
+  }
+
+  if (scene) {
+    disposeResources(scene);
   }
 
   if (renderer) {
@@ -149,4 +199,43 @@ function isWebGLSupported(): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * フォールバック表示
+ */
+function showFallback(container: HTMLElement): void {
+  container.style.background = `linear-gradient(to bottom,
+    ${hexToRgb(skylineConfig.sky.topColor)},
+    ${hexToRgb(skylineConfig.sky.middleColor)},
+    ${hexToRgb(skylineConfig.sky.bottomColor)})`;
+}
+
+/**
+ * 16進数カラーをRGB文字列に変換
+ */
+function hexToRgb(hex: number): string {
+  const r = (hex >> 16) & 255;
+  const g = (hex >> 8) & 255;
+  const b = hex & 255;
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+/**
+ * デバウンス関数
+ */
+function debounce<T extends (...args: unknown[]) => void>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  return (...args: Parameters<T>) => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    timeoutId = setTimeout(() => {
+      func(...args);
+    }, wait);
+  };
 }

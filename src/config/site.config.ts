@@ -6,7 +6,7 @@ export const siteConfig = {
   name: 'Night Walk',
   title: 'Developer & Designer',
   description: 'A portfolio and blog built with Astro Nightwalk theme',
-  url: 'https://example.com', // デプロイ時に実際のURLに変更
+  url: 'https://kpab.github.io/astro-nightwalk',
 
   // 著者情報
   author: {

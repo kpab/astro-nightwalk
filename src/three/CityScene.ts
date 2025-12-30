@@ -1,11 +1,10 @@
 /**
  * CityScene.ts - メインの街並みシーン管理
- * Three.jsを使用して惑星都市をレンダリング
+ * Three.jsを使用してサイバーパンクな都市フライスルーをレンダリング
  */
 
 import * as THREE from 'three';
-import { skylineConfig } from '../config/skyline.config';
-import { generateCityscape, getSphereRadius } from './buildings';
+import { createCityChunk, CHUNK_SIZE } from './buildings';
 import {
   detectMobileDevice,
   getOptimalPixelRatio,
@@ -24,12 +23,13 @@ let visibilityObserver: IntersectionObserver | null = null;
 let frameCounter = 0;
 const FPS_CHECK_INTERVAL = 60;
 
-// カメラ軌道アニメーション用の変数
-let orbitAngle = 0;
-const ORBIT_SPEED = 0.002; // 軌道速度
-const ORBIT_RADIUS = 180; // カメラの軌道半径
-const ORBIT_HEIGHT = 60; // カメラの高さオフセット
-const CAMERA_TILT = 0.3; // カメラの傾き（ラジアン）
+// フライスルー設定
+const MOVE_SPEED = 2.0; // カメラの前進速度
+const CAMERA_HEIGHT = 15; // カメラの高さ（地上付近）
+const CHUNK_COUNT = 3; // 同時に表示するチャンク数（手前から奥へ）
+
+const cityChunks: THREE.Group[] = [];
+let totalDistance = 0;
 
 /**
  * 街並みシーンを初期化
@@ -47,14 +47,15 @@ export function initCityScene(canvas: HTMLCanvasElement, container: HTMLElement)
   // シーン作成
   scene = new THREE.Scene();
 
-  // 宇宙背景
-  createSpaceBackground(scene);
+  // フォグ設定（遠くをぼかす）
+  scene.fog = new THREE.FogExp2(0x050510, 0.0015);
+  scene.background = new THREE.Color(0x050510);
 
   // カメラ設定
   const aspect = container.clientWidth / container.clientHeight;
-  camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 2000);
-  camera.position.set(ORBIT_RADIUS, ORBIT_HEIGHT, 0);
-  camera.lookAt(0, 0, 0);
+  camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 2000);
+  camera.position.set(0, CAMERA_HEIGHT, 0);
+  camera.lookAt(0, CAMERA_HEIGHT, -100);
 
   // レンダラー設定
   const pixelRatio = getOptimalPixelRatio(isMobile);
@@ -74,8 +75,8 @@ export function initCityScene(canvas: HTMLCanvasElement, container: HTMLElement)
   // ライティング設定
   setupLighting(scene);
 
-  // 街並み生成（球体上）
-  generateCityscape(scene, isMobile);
+  // 街並み生成（チャンクベース）
+  initCityChunks(scene, isMobile);
 
   // リサイズハンドラ
   const resizeHandler = debounce(() => handleResize(container, isMobile), 100);
@@ -100,82 +101,94 @@ export function initCityScene(canvas: HTMLCanvasElement, container: HTMLElement)
 }
 
 /**
- * 宇宙背景を作成
+ * 初期の街並みチャンクを生成
  */
-function createSpaceBackground(scene: THREE.Scene): void {
-  // 星空のシェーダー
-  const starGeometry = new THREE.BufferGeometry();
-  const starCount = 2000;
-  const positions = new Float32Array(starCount * 3);
+function initCityChunks(scene: THREE.Scene, isMobile: boolean): void {
+  // 既存のチャンクがあれば削除
+  cityChunks.forEach(chunk => scene.remove(chunk));
+  cityChunks.length = 0;
+  totalDistance = 0;
 
-  for (let i = 0; i < starCount * 3; i += 3) {
-    // 球状に星を配置
-    const radius = 800 + Math.random() * 400;
-    const theta = Math.random() * Math.PI * 2;
-    const phi = Math.acos(2 * Math.random() - 1);
+  for (let i = 0; i < CHUNK_COUNT; i++) {
+    const chunk = createCityChunk(i, isMobile);
 
-    positions[i] = radius * Math.sin(phi) * Math.cos(theta);
-    positions[i + 1] = radius * Math.cos(phi);
-    positions[i + 2] = radius * Math.sin(phi) * Math.sin(theta);
+    // buildings.ts の createCityChunk は `zStart = -chunkIndex * CHUNK_SIZE` で生成するが、
+    // Chunk 0, 1, 2 が正しく並ぶようになっている。
+    // chunk index 0: ranges from 0 to -1000
+    // chunk index 1: ranges from -1000 to -2000
+    // ...
+    // なのでそのまま追加すればつながる。
+
+    scene.add(chunk);
+    cityChunks.push(chunk);
   }
-
-  starGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-
-  const starMaterial = new THREE.PointsMaterial({
-    color: 0xffffff,
-    size: 1.5,
-    sizeAttenuation: true,
-  });
-
-  const stars = new THREE.Points(starGeometry, starMaterial);
-  scene.add(stars);
-
-  // 背景色
-  scene.background = new THREE.Color(0x050510);
 }
 
 /**
  * ライティングをセットアップ
  */
 function setupLighting(scene: THREE.Scene): void {
-  // 環境光（弱め）
-  const ambientLight = new THREE.AmbientLight(0x4a3a6a, 0.3);
+  // 環境光
+  const ambientLight = new THREE.AmbientLight(0x4a3a6a, 0.5);
   scene.add(ambientLight);
 
-  // 太陽光（惑星の側面から）
-  const sunLight = new THREE.DirectionalLight(0xff7b00, 1.5);
-  sunLight.position.set(-200, 100, -100);
-  scene.add(sunLight);
+  // 都市の光（月明かりやネオンの反射）
+  const dirLight = new THREE.DirectionalLight(0x6688ff, 1.0);
+  dirLight.position.set(100, 200, 50);
+  scene.add(dirLight);
 
-  // 反対側からの弱いフィルライト
-  const fillLight = new THREE.DirectionalLight(0x6688ff, 0.3);
-  fillLight.position.set(200, -50, 100);
-  scene.add(fillLight);
-
-  // 半球ライト
-  const hemisphereLight = new THREE.HemisphereLight(0xff9966, 0x1a0533, 0.4);
-  scene.add(hemisphereLight);
+  // 道路からの照り返し的なライト
+  const streetLight = new THREE.PointLight(0xffaa00, 0.5, 300);
+  streetLight.position.set(0, 10, -50);
+  scene.add(streetLight);
 }
 
 /**
- * カメラの軌道アニメーションを更新
+ * 無限ループ処理
  */
-function updateCameraOrbit(): void {
-  orbitAngle += ORBIT_SPEED;
+function updateCityInfiniteLoop(): void {
+  // カメラ移動
+  camera.position.z -= MOVE_SPEED;
+  totalDistance += MOVE_SPEED;
 
-  // 楕円軌道で回転
-  const x = Math.cos(orbitAngle) * ORBIT_RADIUS;
-  const z = Math.sin(orbitAngle) * ORBIT_RADIUS;
-  const y = Math.sin(orbitAngle * 0.5) * ORBIT_HEIGHT + ORBIT_HEIGHT;
+  // 1チャンクリサイクル判定
+  if (totalDistance >= CHUNK_SIZE) {
+    // 一番後ろ（カメラから見て通過済み）のチャンクを取得
+    const passedChunk = cityChunks.shift(); // 先頭を取り出す
+    if (passedChunk) {
+      // 一番奥のチャンクの位置を基準に配置
+      // cityChunks は shift されたので、現在の末尾が一番奥のチャンク
+      // const lastChunk = cityChunks[cityChunks.length - 1]; 
 
-  camera.position.set(x, y, z);
+      // passedChunk をどう移動させるか？
+      // 初期状態:
+      // chunk[0] (z: 0~-1000)
+      // chunk[1] (z: -1000~-2000)
+      // chunk[2] (z: -2000~-3000)
 
-  // 惑星の中心を見つつ、少し上を向く
-  const lookAtY = Math.sin(orbitAngle * 0.3) * 20;
-  camera.lookAt(0, lookAtY, 0);
+      // loop 1: distance >= 1000.
+      // passedChunk = chunk[0].
+      // current array: [1, 2].
+      // chunk[0] を chunk[2] の後ろ (-3000~-4000) に置きたい。
+      // chunk[0] の元のジオメトリは 0~-1000。
+      // なので position.z を -3000 にすれば OK。
 
-  // カメラを少し傾ける
-  camera.rotation.z = Math.sin(orbitAngle * 0.2) * CAMERA_TILT;
+      // 一般化:
+      // 今まで何回リサイクルしたか？
+      // あるいは、相対的にずらす。
+      // 今回は position.z を「ずらす」だけで対応。
+      // 移動量は常に `-(CHUNK_COUNT * CHUNK_SIZE)`
+
+      passedChunk.position.z -= CHUNK_COUNT * CHUNK_SIZE;
+
+      // シーンに追加しなおす必要はない（group内の入れ替えではないため）
+      // 配列に戻す
+      cityChunks.push(passedChunk);
+
+      // 距離カウンタをリセット（余剰分を持ち越す）
+      totalDistance -= CHUNK_SIZE;
+    }
+  }
 }
 
 /**
@@ -213,8 +226,8 @@ function animate(): void {
     frameCounter = 0;
   }
 
-  // カメラ軌道アニメーション
-  updateCameraOrbit();
+  // カメラ・シーン更新
+  updateCityInfiniteLoop();
 
   renderer.render(scene, camera);
 }
@@ -240,6 +253,8 @@ export function disposeCityScene(): void {
   if (renderer) {
     renderer.dispose();
   }
+
+  cityChunks.length = 0;
 }
 
 /**

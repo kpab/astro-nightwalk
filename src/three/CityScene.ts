@@ -4,11 +4,20 @@
  */
 
 import * as THREE from 'three';
+import { skylineConfig } from '../config/skyline.config';
+import { generateCityscape } from './buildings';
 
 let scene: THREE.Scene;
 let camera: THREE.PerspectiveCamera;
 let renderer: THREE.WebGLRenderer;
 let animationId: number;
+
+/**
+ * モバイルデバイスかどうかを判定
+ */
+function isMobileDevice(): boolean {
+  return window.innerWidth < 768 || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
 
 /**
  * 街並みシーンを初期化
@@ -20,53 +29,73 @@ export function initCityScene(canvas: HTMLCanvasElement, container: HTMLElement)
     return;
   }
 
+  const isMobile = isMobileDevice();
+  const config = skylineConfig;
+
   // シーン作成
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x1a0533);
+  scene.background = new THREE.Color(config.sky.topColor);
+
+  // フォグ設定
+  if (config.fog.enabled) {
+    scene.fog = new THREE.Fog(config.fog.color, config.fog.near, config.fog.far);
+  }
 
   // カメラ設定
   const aspect = container.clientWidth / container.clientHeight;
-  camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 1000);
-  camera.position.set(0, 30, 80);
-  camera.lookAt(0, 20, 0);
+  camera = new THREE.PerspectiveCamera(config.camera.fov, aspect, config.camera.near, config.camera.far);
+  camera.position.set(config.camera.position.x, config.camera.position.y, config.camera.position.z);
+  camera.lookAt(config.camera.lookAt.x, config.camera.lookAt.y, config.camera.lookAt.z);
 
   // レンダラー設定
+  const pixelRatio = isMobile ? config.performance.mobilePixelRatio : config.performance.desktopPixelRatio;
   renderer = new THREE.WebGLRenderer({
     canvas,
-    antialias: true,
+    antialias: !isMobile, // モバイルではアンチエイリアス無効
     alpha: false,
+    powerPreference: isMobile ? 'low-power' : 'high-performance',
   });
   renderer.setSize(container.clientWidth, container.clientHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, pixelRatio));
 
-  // 基本ライティング（Phase 3で詳細実装）
-  const ambientLight = new THREE.AmbientLight(0x4a3a6a, 0.4);
-  scene.add(ambientLight);
+  // ライティング設定
+  setupLighting(scene, config);
 
-  const sunLight = new THREE.DirectionalLight(0xff7b00, 1.2);
-  sunLight.position.set(-50, 30, -50);
-  scene.add(sunLight);
-
-  // テスト用ボックス（Phase 2で置き換え）
-  const geometry = new THREE.BoxGeometry(10, 40, 10);
-  const material = new THREE.MeshStandardMaterial({ color: 0x333333 });
-  const testBuilding = new THREE.Mesh(geometry, material);
-  testBuilding.position.y = 20;
-  scene.add(testBuilding);
-
-  // 地面
-  const groundGeometry = new THREE.PlaneGeometry(500, 500);
-  const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x1a1a2e });
-  const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-  ground.rotation.x = -Math.PI / 2;
-  ground.position.y = 0;
-  scene.add(ground);
+  // 街並み生成
+  generateCityscape(scene, isMobile);
 
   // リサイズハンドラ
-  window.addEventListener('resize', () => handleResize(container));
+  const resizeHandler = () => handleResize(container);
+  window.addEventListener('resize', resizeHandler);
 
   // アニメーションループ開始
   animate();
+}
+
+/**
+ * ライティングをセットアップ
+ */
+function setupLighting(scene: THREE.Scene, config: typeof skylineConfig): void {
+  // 環境光
+  const ambientLight = new THREE.AmbientLight(config.lighting.ambientColor, config.lighting.ambientIntensity);
+  scene.add(ambientLight);
+
+  // 太陽光（ディレクショナルライト）
+  const sunLight = new THREE.DirectionalLight(config.lighting.sunColor, config.lighting.sunIntensity);
+  sunLight.position.set(
+    config.lighting.sunPosition.x,
+    config.lighting.sunPosition.y,
+    config.lighting.sunPosition.z
+  );
+  scene.add(sunLight);
+
+  // 半球ライト（空と地面からの間接光）
+  const hemisphereLight = new THREE.HemisphereLight(
+    config.lighting.hemisphereTopColor,
+    config.lighting.hemisphereBottomColor,
+    config.lighting.hemisphereIntensity
+  );
+  scene.add(hemisphereLight);
 }
 
 /**
@@ -101,8 +130,6 @@ export function disposeCityScene(): void {
   if (renderer) {
     renderer.dispose();
   }
-
-  window.removeEventListener('resize', () => {});
 }
 
 /**

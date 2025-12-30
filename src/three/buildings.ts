@@ -1,0 +1,260 @@
+/**
+ * buildings.ts - プロシージャルビル生成
+ * 様々な形状のビルを動的に生成
+ */
+
+import * as THREE from 'three';
+import { skylineConfig } from '../config/skyline.config';
+
+// ビルのカラーパレット（夕方のシルエット用）
+const BUILDING_COLORS = [
+  0x1a1a2e, // 濃い青紫
+  0x16213e, // 深い紺
+  0x1f1f3d, // 暗い紫
+  0x252540, // グレー紫
+  0x2d2d4a, // 中間紫
+];
+
+// ビルタイプ定義
+type BuildingType = 'box' | 'tower' | 'wide' | 'stepped';
+
+interface BuildingParams {
+  width: number;
+  height: number;
+  depth: number;
+  type: BuildingType;
+}
+
+/**
+ * ランダムな値を範囲内で生成
+ */
+function randomRange(min: number, max: number): number {
+  return Math.random() * (max - min) + min;
+}
+
+/**
+ * ビルタイプをランダムに選択
+ */
+function getRandomBuildingType(): BuildingType {
+  const types: BuildingType[] = ['box', 'box', 'tower', 'wide', 'stepped'];
+  return types[Math.floor(Math.random() * types.length)];
+}
+
+/**
+ * 基本的なボックスビルを生成
+ */
+function createBoxBuilding(params: BuildingParams): THREE.Group {
+  const group = new THREE.Group();
+
+  const geometry = new THREE.BoxGeometry(params.width, params.height, params.depth);
+  const color = BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)];
+  const material = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.9,
+    metalness: 0.1,
+  });
+
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.y = params.height / 2;
+  group.add(mesh);
+
+  return group;
+}
+
+/**
+ * タワー型ビルを生成（高くて細い）
+ */
+function createTowerBuilding(params: BuildingParams): THREE.Group {
+  const group = new THREE.Group();
+
+  // メインタワー
+  const towerWidth = params.width * 0.7;
+  const towerDepth = params.depth * 0.7;
+  const geometry = new THREE.BoxGeometry(towerWidth, params.height, towerDepth);
+  const color = BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)];
+  const material = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.85,
+    metalness: 0.15,
+  });
+
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.y = params.height / 2;
+  group.add(mesh);
+
+  // 屋上構造物
+  const roofHeight = params.height * 0.08;
+  const roofGeometry = new THREE.BoxGeometry(towerWidth * 0.6, roofHeight, towerDepth * 0.6);
+  const roofMesh = new THREE.Mesh(roofGeometry, material);
+  roofMesh.position.y = params.height + roofHeight / 2;
+  group.add(roofMesh);
+
+  return group;
+}
+
+/**
+ * 幅広ビルを生成（横長）
+ */
+function createWideBuilding(params: BuildingParams): THREE.Group {
+  const group = new THREE.Group();
+
+  const wideWidth = params.width * 1.5;
+  const wideHeight = params.height * 0.6;
+  const geometry = new THREE.BoxGeometry(wideWidth, wideHeight, params.depth);
+  const color = BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)];
+  const material = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.9,
+    metalness: 0.1,
+  });
+
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.y = wideHeight / 2;
+  group.add(mesh);
+
+  return group;
+}
+
+/**
+ * 段差ビルを生成（複数のボックスを積み重ね）
+ */
+function createSteppedBuilding(params: BuildingParams): THREE.Group {
+  const group = new THREE.Group();
+
+  const color = BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)];
+  const material = new THREE.MeshStandardMaterial({
+    color,
+    roughness: 0.88,
+    metalness: 0.12,
+  });
+
+  const steps = Math.floor(randomRange(2, 4));
+  let currentY = 0;
+  let currentWidth = params.width;
+  let currentDepth = params.depth;
+
+  for (let i = 0; i < steps; i++) {
+    const stepHeight = params.height / steps;
+    const geometry = new THREE.BoxGeometry(currentWidth, stepHeight, currentDepth);
+    const mesh = new THREE.Mesh(geometry, material.clone());
+    mesh.position.y = currentY + stepHeight / 2;
+    group.add(mesh);
+
+    currentY += stepHeight;
+    currentWidth *= 0.85;
+    currentDepth *= 0.85;
+  }
+
+  return group;
+}
+
+/**
+ * ビルを生成（タイプに基づく）
+ */
+function createBuilding(params: BuildingParams): THREE.Group {
+  switch (params.type) {
+    case 'tower':
+      return createTowerBuilding(params);
+    case 'wide':
+      return createWideBuilding(params);
+    case 'stepped':
+      return createSteppedBuilding(params);
+    default:
+      return createBoxBuilding(params);
+  }
+}
+
+/**
+ * 配置位置の衝突チェック
+ */
+function checkCollision(
+  position: THREE.Vector2,
+  size: THREE.Vector2,
+  placed: Array<{ position: THREE.Vector2; size: THREE.Vector2 }>
+): boolean {
+  const spacing = skylineConfig.buildings.spacing;
+
+  for (const building of placed) {
+    const minDistX = (size.x + building.size.x) / 2 + spacing;
+    const minDistZ = (size.y + building.size.y) / 2 + spacing;
+
+    if (
+      Math.abs(position.x - building.position.x) < minDistX &&
+      Math.abs(position.y - building.position.y) < minDistZ
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * 街並み全体を生成
+ */
+export function generateCityscape(scene: THREE.Scene, isMobile: boolean): void {
+  const config = skylineConfig.buildings;
+  const buildingCount = isMobile ? skylineConfig.performance.mobileBuildingCount : config.count;
+
+  const placed: Array<{ position: THREE.Vector2; size: THREE.Vector2 }> = [];
+  let attempts = 0;
+  const maxAttempts = buildingCount * 10;
+
+  while (placed.length < buildingCount && attempts < maxAttempts) {
+    attempts++;
+
+    // ランダムなビルパラメータを生成
+    const width = randomRange(config.minWidth, config.maxWidth);
+    const height = randomRange(config.minHeight, config.maxHeight);
+    const depth = randomRange(config.minDepth, config.maxDepth);
+    const type = getRandomBuildingType();
+
+    // 中央付近は高いビルを配置する傾向
+    const gridHalf = config.gridSize / 2;
+    const x = randomRange(-gridHalf, gridHalf);
+    const z = randomRange(-gridHalf * 0.3, gridHalf * 0.8); // 手前に多く配置
+
+    const position = new THREE.Vector2(x, z);
+    const size = new THREE.Vector2(width, depth);
+
+    // 衝突チェック
+    if (!checkCollision(position, size, placed)) {
+      // 中央に近いほど高くする
+      const distanceFromCenter = Math.sqrt(x * x + z * z);
+      const heightMultiplier = 1 + (1 - distanceFromCenter / gridHalf) * 0.5;
+
+      const buildingParams: BuildingParams = {
+        width,
+        height: height * heightMultiplier,
+        depth,
+        type,
+      };
+
+      const building = createBuilding(buildingParams);
+      building.position.set(x, 0, z);
+      scene.add(building);
+
+      placed.push({ position, size });
+    }
+  }
+
+  // 地面を追加
+  createGround(scene);
+}
+
+/**
+ * 地面を生成
+ */
+function createGround(scene: THREE.Scene): void {
+  const gridSize = skylineConfig.buildings.gridSize * 2;
+  const geometry = new THREE.PlaneGeometry(gridSize, gridSize);
+  const material = new THREE.MeshStandardMaterial({
+    color: 0x0a0a14,
+    roughness: 1,
+    metalness: 0,
+  });
+
+  const ground = new THREE.Mesh(geometry, material);
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.y = 0;
+  scene.add(ground);
+}

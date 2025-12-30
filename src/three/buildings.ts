@@ -1,31 +1,31 @@
 /**
- * buildings.ts - プロシージャルビル生成（リアルなスカイライン版）
- * 複雑な形状のビルを生成し、リアルな夜景を作り出す
+ * buildings.ts - プロシージャルビル生成（リアルなスカイライン版 - 夕暮れ）
+ * 複雑な形状のビルを生成し、夕暮れ時のリアルな街並みを作り出す
  */
 
 import * as THREE from 'three';
 
-// ビルのカラーパレット（リアルなコンクリート・ガラス・鋼鉄）
+// ビルのカラーパレット（夕暮れに映えるコンクリート・ガラス・鋼鉄）
 const BUILDING_COLORS = [
-  0x2a2a35, // ダークグレー（コンクリート）
-  0x1a1a25, // ブラックメタル
-  0x303040, // 鉄骨系
-  0x151520, // 深いガラス
-  0x252530, // 都会的なグレー
-  0x0a0a12, // 漆黒
+  0x3a3a45, // やや明るめのコンクリート（夕日を受ける）
+  0x2a2a35, // 標準的なビルグレー
+  0x1a1a25, // ダークメタル
+  0x202030, // 青みがかったグレー
+  0x403530, // ほんのり赤みを帯びたグレー
 ];
 
-// 窓設定（リアルなオフィス光）
+// 窓設定（夕暮れの反射 + 点灯し始めた明かり）
 const WINDOW_COLORS = [
-  '#fff8e7', // 暖かいオフィスライト
-  '#f0f8ff', // クールな蛍光灯
-  '#e6e6fa', // 少し青みがかった白
-  '#ffecd1', // オレンジ系
+  '#ff9966', // 夕日の強い反射
+  '#ffccaa', // 淡い反射
+  '#556688', // 空の反射
+  '#2a2a40', // 暗い部屋
+  '#ffebcd', // 点灯し始めた暖かい光
 ];
 
 // チャンク設定
 export const CHUNK_SIZE = 1000;
-export const BUILDING_RANGE_X = 400; // 少し広げる
+export const BUILDING_RANGE_X = 400;
 export const ROAD_WIDTH = 50;
 
 /**
@@ -36,49 +36,65 @@ function randomRange(min: number, max: number): number {
 }
 
 /**
- * 窓テクスチャをCanvasで動的に生成
+ * 窓テクスチャをCanvasで動的に生成（高精細化）
  */
 function createWindowTexture(
   width: number,
   height: number,
-  windowLitChance: number = 0.4
+  windowLitChance: number = 0.5
 ): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d')!;
 
   const scale = 2;
-  canvas.width = 128;
-  canvas.height = Math.round((height / width) * 128);
+  canvas.width = 256; // 解像度アップ
+  canvas.height = Math.round((height / width) * 256);
 
   // 背景（ビルの壁面）
-  ctx.fillStyle = '#0a0a12';
+  ctx.fillStyle = '#151515';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // 窓のサイズ比率
-  const windowW = 4;
-  const windowH = 8;
-  const gapX = 4;
-  const gapY = 6;
+  // 窓のスタイル（縦長、横長、カーテンウォール）
+  const style = Math.random();
+  let windowW, windowH, gapX, gapY;
+
+  if (style < 0.4) {
+    // 標準的なオフィス窓
+    windowW = 6; windowH = 10; gapX = 4; gapY = 6;
+  } else if (style < 0.7) {
+    // 横長連窓
+    windowW = 20; windowH = 8; gapX = 4; gapY = 8;
+  } else {
+    // 全面ガラス張り風（隙間小）
+    windowW = 12; windowH = 12; gapX = 2; gapY = 2;
+  }
 
   const cols = Math.floor(canvas.width / (windowW + gapX));
   const rows = Math.floor(canvas.height / (windowH + gapY));
 
-  // たまに航空障害灯のような赤い点滅ライトを描画したいが、
-  // 静的テクスチャなので、赤いライトを少し混ぜるだけに留める
-
   for (let row = 0; row < rows; row++) {
-    // フロアごとの点灯パターン（オフィスビルっぽく、フロア単位で明るかったり暗かったり）
-    const floorActive = Math.random() < 0.7;
+    // 夕暮れなので、「反射」か「明かり」かのロジック
+    // 上層階ほど反射が強い（空に近い）
+    const isTop = row < rows * 0.3;
 
     for (let col = 0; col < cols; col++) {
-      // 窓が光る確率
-      if (floorActive && Math.random() < windowLitChance) {
-        const x = col * (windowW + gapX) + gapX;
-        const y = row * (windowH + gapY) + gapY;
+      const x = col * (windowW + gapX) + gapX;
+      const y = row * (windowH + gapY) + gapY;
 
-        ctx.fillStyle = WINDOW_COLORS[Math.floor(Math.random() * WINDOW_COLORS.length)];
-        ctx.fillRect(x, y, windowW, windowH);
+      let color;
+      if (Math.random() < 0.2) {
+        // 点灯（まばら）
+        color = '#ffebcd';
+      } else if (Math.random() < 0.4) {
+        // 夕日の反射 (西側を想定するのは難しいのでランダムに散らす)
+        color = Math.random() < 0.5 ? '#ff9966' : '#556688';
+      } else {
+        // 暗い or 微弱な反射
+        color = '#1a1a25';
       }
+
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, windowW, windowH);
     }
   }
 
@@ -88,7 +104,6 @@ function createWindowTexture(
   texture.magFilter = THREE.LinearFilter;
   texture.minFilter = THREE.LinearMipmapLinearFilter;
   texture.needsUpdate = true;
-
   return texture;
 }
 
@@ -101,6 +116,7 @@ function createBuildingMaterial(
   baseColor: number
 ): THREE.MeshStandardMaterial {
   const windowTexture = createWindowTexture(width, height);
+  // エミッシブマップは窓テクスチャをそのまま使うが、強さを抑える
   const emissiveTexture = windowTexture.clone();
 
   return new THREE.MeshStandardMaterial({
@@ -108,14 +124,14 @@ function createBuildingMaterial(
     map: windowTexture,
     emissive: 0xffffff,
     emissiveMap: emissiveTexture,
-    emissiveIntensity: 1.5, // 輝きを強める
-    roughness: 0.1, // ガラス質
-    metalness: 0.6, // 金属感
+    emissiveIntensity: 0.5, // 夕暮れなので自己発光は控えめに
+    roughness: 0.2, // ガラス感強め
+    metalness: 0.7, // 金属感強め
   });
 }
 
 /**
- * 複雑な形状のビル（超高層ビル）を作成
+ * 複雑な形状のビル（超高層ビル）を作成 + 屋上ディテール
  */
 function createSkyscraper(
   x: number,
@@ -125,16 +141,14 @@ function createSkyscraper(
   baseDepth: number
 ): THREE.Group {
   const group = new THREE.Group();
-  group.position.set(x, 0, z); // グループの原点は地面
+  group.position.set(x, 0, z);
 
   const color = BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)];
-
-  // スタイル決定
   const style = Math.random();
 
+  // メイン構造
   if (style < 0.4) {
-    // タイプA: セットバック（階段状）
-    // 下層
+    // セットバック型
     const h1 = totalHeight * 0.6;
     const mesh1 = new THREE.Mesh(
       new THREE.BoxGeometry(baseWidth, h1, baseDepth),
@@ -143,7 +157,6 @@ function createSkyscraper(
     mesh1.position.y = h1 / 2;
     group.add(mesh1);
 
-    // 上層
     const w2 = baseWidth * 0.7;
     const d2 = baseDepth * 0.7;
     const h2 = totalHeight * 0.4;
@@ -154,29 +167,30 @@ function createSkyscraper(
     mesh2.position.y = h1 + h2 / 2;
     group.add(mesh2);
 
+    addRoofDetails(group, w2, d2, totalHeight);
+
   } else if (style < 0.7) {
-    // タイプB: ツインタワー風 or 凹凸
+    // ツインタワー
     const h1 = totalHeight;
     const w1 = baseWidth * 0.45;
     const d1 = baseDepth;
 
-    // 左棟
     const mesh1 = new THREE.Mesh(
       new THREE.BoxGeometry(w1, h1, d1),
       createBuildingMaterial(w1, h1, color)
     );
     mesh1.position.set(-baseWidth / 4, h1 / 2, 0);
     group.add(mesh1);
+    addRoofDetails(group, w1, d1, h1, -baseWidth / 4);
 
-    // 右棟
     const mesh2 = new THREE.Mesh(
       new THREE.BoxGeometry(w1, h1 * 0.9, d1),
       createBuildingMaterial(w1, h1 * 0.9, color)
     );
     mesh2.position.set(baseWidth / 4, (h1 * 0.9) / 2, 0);
     group.add(mesh2);
+    addRoofDetails(group, w1, d1, h1 * 0.9, baseWidth / 4);
 
-    // 連結部（低層）
     const hCenter = h1 * 0.3;
     const meshCenter = new THREE.Mesh(
       new THREE.BoxGeometry(baseWidth * 0.2, hCenter, d1 * 0.8),
@@ -186,27 +200,61 @@ function createSkyscraper(
     group.add(meshCenter);
 
   } else {
-    // タイプC: シンプルなマッシブタワー
+    // シンプルタワー
     const mesh = new THREE.Mesh(
       new THREE.BoxGeometry(baseWidth, totalHeight, baseDepth),
       createBuildingMaterial(baseWidth, totalHeight, color)
     );
     mesh.position.y = totalHeight / 2;
     group.add(mesh);
-
-    // アンテナ的なもの
-    if (Math.random() < 0.5) {
-      const antennaH = totalHeight * 0.15;
-      const antenna = new THREE.Mesh(
-        new THREE.CylinderGeometry(1, 1, antennaH, 8),
-        new THREE.MeshStandardMaterial({ color: 0x888888, metalness: 1.0, roughness: 0.2 })
-      );
-      antenna.position.y = totalHeight + antennaH / 2;
-      group.add(antenna);
-    }
+    addRoofDetails(group, baseWidth, baseDepth, totalHeight);
   }
 
   return group;
+}
+
+/**
+ * 屋上のディテールを追加（ACユニット、給水塔、アンテナなど）
+ * カメラが高いので、屋上が見える
+ */
+function addRoofDetails(group: THREE.Group, width: number, depth: number, floorHeight: number, xOffset: number = 0) {
+  const detailCount = Math.floor(randomRange(2, 5));
+  const roofColor = 0x555555;
+  const roofMat = new THREE.MeshStandardMaterial({ color: roofColor, roughness: 0.9, metalness: 0.1 });
+
+  for (let i = 0; i < detailCount; i++) {
+    const type = Math.random();
+
+    if (type < 0.5) {
+      // ACユニットっぽい箱
+      const w = randomRange(2, 5);
+      const h = randomRange(2, 4);
+      const d = randomRange(2, 5);
+      const box = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), roofMat);
+
+      const px = randomRange(-width / 2 + w, width / 2 - w) + xOffset;
+      const pz = randomRange(-depth / 2 + d, depth / 2 - d);
+      box.position.set(px, floorHeight + h / 2, pz);
+      group.add(box);
+    } else {
+      // アンテナ/ポール
+      const h = randomRange(5, 20);
+      const r = randomRange(0.2, 0.5);
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 8), roofMat);
+
+      const px = randomRange(-width / 2 + 2, width / 2 - 2) + xOffset;
+      const pz = randomRange(-depth / 2 + 2, depth / 2 - 2);
+      pole.position.set(px, floorHeight + h / 2, pz);
+      group.add(pole);
+
+      // 航空障害灯（赤く点滅しないが、赤い球をつけておく）
+      const lightGeo = new THREE.SphereGeometry(1, 8, 8);
+      const lightMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+      const light = new THREE.Mesh(lightGeo, lightMat);
+      light.position.set(px, floorHeight + h, pz);
+      group.add(light);
+    }
+  }
 }
 
 /**
@@ -215,8 +263,6 @@ function createSkyscraper(
 export function createCityChunk(chunkIndex: number, isMobile: boolean): THREE.Group {
   const group = new THREE.Group();
 
-  // チャンク設定
-  // リアルさを出すために数を調整
   const buildingCount = isMobile ? 25 : 50;
   const zStart = -chunkIndex * CHUNK_SIZE;
   const zEnd = zStart - CHUNK_SIZE;
@@ -227,15 +273,10 @@ export function createCityChunk(chunkIndex: number, isMobile: boolean): THREE.Gr
       x = x > 0 ? x + ROAD_WIDTH : x - ROAD_WIDTH;
     }
 
-    // リアルなスケール感
-    // 手前と奥で分布を変える（より自然に）
-    // 中心に近いほど高くする、というロジックも良いが、とりあえずランダム配置
     const width = randomRange(30, 80);
     const depth = randomRange(30, 80);
-
-    // 高さは極端にばらつかせる
     let height = randomRange(80, 400);
-    if (Math.random() < 0.1) height += 200; // たまに超高層ビル
+    if (Math.random() < 0.1) height += 200;
 
     const z = randomRange(zEnd, zStart);
 
@@ -243,26 +284,24 @@ export function createCityChunk(chunkIndex: number, isMobile: boolean): THREE.Gr
     group.add(building);
   }
 
-  // 地面（道路）: アスファルト
+  // 地面（道路）: 少し濡れたアスファルト（夕日を反射）
   const floorGeo = new THREE.PlaneGeometry(BUILDING_RANGE_X * 2, CHUNK_SIZE);
   const floorMat = new THREE.MeshStandardMaterial({
-    color: 0x050505,
-    roughness: 0.8,
-    metalness: 0.2
+    color: 0x1a1a20,
+    roughness: 0.4, // 反射強め
+    metalness: 0.3
   });
   const floor = new THREE.Mesh(floorGeo, floorMat);
   floor.rotation.x = -Math.PI / 2;
   floor.position.set(0, 0, zStart - CHUNK_SIZE / 2);
   group.add(floor);
 
-  // 道路の白線などのディテール（簡易的）
   // センターライン
   const roadLineGeo = new THREE.BoxGeometry(2, 0.1, CHUNK_SIZE);
-  const roadLineMat = new THREE.MeshBasicMaterial({ color: 0x888888 }); // より明るくして視認性向上
+  const roadLineMat = new THREE.MeshBasicMaterial({ color: 0x666666 });
   const roadLine = new THREE.Mesh(roadLineGeo, roadLineMat);
   roadLine.position.set(0, 0.1, zStart - CHUNK_SIZE / 2);
   group.add(roadLine);
 
   return group;
 }
-

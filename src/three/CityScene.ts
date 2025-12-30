@@ -48,9 +48,11 @@ export function initCityScene(canvas: HTMLCanvasElement, container: HTMLElement)
   // シーン作成
   scene = new THREE.Scene();
 
-  // フォグ設定（リアルな夜霧）
-  scene.fog = new THREE.FogExp2(0x020205, 0.001); // 漆黒に近い
-  scene.background = new THREE.Color(0x020205);
+  // フォグ設定（夕暮れの紫〜群青色のグラデーションを模写）
+  // 完全に真っ暗ではなく、深い紫味のある色
+  const fogColor = 0x2d1b4e;
+  scene.fog = new THREE.FogExp2(fogColor, 0.0012);
+  scene.background = new THREE.Color(fogColor);
 
   // カメラ設定
   const aspect = container.clientWidth / container.clientHeight;
@@ -72,7 +74,7 @@ export function initCityScene(canvas: HTMLCanvasElement, container: HTMLElement)
 
   // トーンマッピング
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.0; // 少し暗めに
+  renderer.toneMappingExposure = 1.1; // 夕暮れの明るさを確保
 
   // ライティング設定
   setupLighting(scene);
@@ -113,38 +115,34 @@ function initCityChunks(scene: THREE.Scene, isMobile: boolean): void {
 
   for (let i = 0; i < CHUNK_COUNT; i++) {
     const chunk = createCityChunk(i, isMobile);
-
-    // buildings.ts の createCityChunk は `zStart = -chunkIndex * CHUNK_SIZE` で生成するが、
-    // Chunk 0, 1, 2 が正しく並ぶようになっている。
-    // chunk index 0: ranges from 0 to -1000
-    // chunk index 1: ranges from -1000 to -2000
-    // ...
-    // なのでそのまま追加すればつながる。
-
     scene.add(chunk);
     cityChunks.push(chunk);
   }
 }
 
 /**
- * ライティングをセットアップ
+ * ライティングをセットアップ（夕暮れ）
  */
 function setupLighting(scene: THREE.Scene): void {
-  // 環境光（月明かりの反射）
-  const ambientLight = new THREE.AmbientLight(0x20202a, 0.4);
+  // 環境光（空からの散乱光：紫系）
+  const ambientLight = new THREE.AmbientLight(0x4a3a6a, 0.6);
   scene.add(ambientLight);
 
-  // 月明かり（青白く、高い位置から）
-  const dirLight = new THREE.DirectionalLight(0xaaccff, 0.8);
-  dirLight.position.set(50, 200, 50);
-  dirLight.castShadow = true; // シャドウは重いが、効果的（今回はレンダラ設定でシャドウマップ有効化してないなら意味ないが設定だけ）
-  scene.add(dirLight);
+  // 沈む夕日（強く暖かいオレンジ色の指向性ライト）
+  // 低い角度から
+  const sunLight = new THREE.DirectionalLight(0xffaa33, 1.5);
+  sunLight.position.set(-100, 50, -100); // 左前方奥から照らすイメージ
+  sunLight.castShadow = true;
+  scene.add(sunLight);
 
-  // 街の喧騒（下からの暖色グロウ）
-  // 道路沿い全体を照らすのは難しいので、カメラ追従させたりするが、
-  // ここでは遠景のボトムライトとして配置
-  const cityGlow = new THREE.HemisphereLight(0x000000, 0x111118, 0.6);
+  // シティグロウ（地上の喧騒：ピンク/オレンジ系）
+  const cityGlow = new THREE.HemisphereLight(0xff6666, 0x111122, 0.4);
   scene.add(cityGlow);
+
+  // 補助的なポイントライト（特定のビルの反射用、適当に散らすと重いので1つだけ象徴的に）
+  // const pointLight = new THREE.PointLight(0xff4422, 1, 500);
+  // pointLight.position.set(0, 100, -200);
+  // scene.add(pointLight);
 }
 
 /**

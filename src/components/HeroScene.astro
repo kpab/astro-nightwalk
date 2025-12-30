@@ -23,36 +23,61 @@
 </div>
 
 <script>
-  import { initCityScene } from '../three/CityScene';
+  import { initCityScene, disposeCityScene } from '../three/CityScene';
 
-  const container = document.getElementById('hero-canvas-container');
-  const canvas = document.getElementById('hero-canvas') as HTMLCanvasElement;
-  const fallback = document.getElementById('hero-fallback');
+  let isInitialized = false;
 
-  // Check for reduced motion preference
-  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function setupScene() {
+    const container = document.getElementById('hero-canvas-container');
+    const canvas = document.getElementById('hero-canvas') as HTMLCanvasElement;
+    const fallback = document.getElementById('hero-fallback');
 
-  if (canvas && container) {
+    if (!canvas || !container) return;
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
     if (prefersReducedMotion) {
-      // Show static fallback for users who prefer reduced motion
       canvas.style.display = 'none';
       fallback?.classList.remove('hidden');
     } else {
       initCityScene(canvas, container);
+      isInitialized = true;
     }
   }
 
-  // Listen for changes to reduced motion preference
+  function cleanupScene() {
+    if (isInitialized) {
+      disposeCityScene();
+      isInitialized = false;
+    }
+  }
+
+  // View Transitions: ページ遷移後の再初期化
+  document.addEventListener('astro:page-load', () => {
+    setupScene();
+  });
+
+  // View Transitions: ページ離脱時のクリーンアップ
+  document.addEventListener('astro:before-swap', () => {
+    cleanupScene();
+  });
+
+  // Reduced motion preference changes
   window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', (e) => {
+    const canvas = document.getElementById('hero-canvas') as HTMLCanvasElement;
+    const container = document.getElementById('hero-canvas-container');
+    const fallback = document.getElementById('hero-fallback');
+
     if (e.matches) {
-      canvas.style.display = 'none';
+      cleanupScene();
+      if (canvas) canvas.style.display = 'none';
       fallback?.classList.remove('hidden');
-      // Note: CityScene should handle cleanup via visibility observer
     } else {
-      canvas.style.display = 'block';
+      if (canvas) canvas.style.display = 'block';
       fallback?.classList.add('hidden');
       if (canvas && container) {
         initCityScene(canvas, container);
+        isInitialized = true;
       }
     }
   });

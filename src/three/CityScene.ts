@@ -47,9 +47,9 @@ export function initCityScene(canvas: HTMLCanvasElement, container: HTMLElement)
   // シーン作成
   scene = new THREE.Scene();
 
-  // フォグ設定（遠くをぼかす）
-  scene.fog = new THREE.FogExp2(0x050510, 0.0015);
-  scene.background = new THREE.Color(0x050510);
+  // フォグ設定（リアルな夜霧）
+  scene.fog = new THREE.FogExp2(0x020205, 0.001); // 漆黒に近い
+  scene.background = new THREE.Color(0x020205);
 
   // カメラ設定
   const aspect = container.clientWidth / container.clientHeight;
@@ -70,7 +70,7 @@ export function initCityScene(canvas: HTMLCanvasElement, container: HTMLElement)
 
   // トーンマッピング
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.2;
+  renderer.toneMappingExposure = 1.0; // 少し暗めに
 
   // ライティング設定
   setupLighting(scene);
@@ -128,19 +128,21 @@ function initCityChunks(scene: THREE.Scene, isMobile: boolean): void {
  * ライティングをセットアップ
  */
 function setupLighting(scene: THREE.Scene): void {
-  // 環境光
-  const ambientLight = new THREE.AmbientLight(0x4a3a6a, 0.5);
+  // 環境光（月明かりの反射）
+  const ambientLight = new THREE.AmbientLight(0x20202a, 0.4);
   scene.add(ambientLight);
 
-  // 都市の光（月明かりやネオンの反射）
-  const dirLight = new THREE.DirectionalLight(0x6688ff, 1.0);
-  dirLight.position.set(100, 200, 50);
+  // 月明かり（青白く、高い位置から）
+  const dirLight = new THREE.DirectionalLight(0xaaccff, 0.8);
+  dirLight.position.set(50, 200, 50);
+  dirLight.castShadow = true; // シャドウは重いが、効果的（今回はレンダラ設定でシャドウマップ有効化してないなら意味ないが設定だけ）
   scene.add(dirLight);
 
-  // 道路からの照り返し的なライト
-  const streetLight = new THREE.PointLight(0xffaa00, 0.5, 300);
-  streetLight.position.set(0, 10, -50);
-  scene.add(streetLight);
+  // 街の喧騒（下からの暖色グロウ）
+  // 道路沿い全体を照らすのは難しいので、カメラ追従させたりするが、
+  // ここでは遠景のボトムライトとして配置
+  const cityGlow = new THREE.HemisphereLight(0x000000, 0x111118, 0.6);
+  scene.add(cityGlow);
 }
 
 /**

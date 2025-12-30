@@ -5,6 +5,7 @@ import sitemap from '@astrojs/sitemap';
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://example.com', // デプロイ時に実際のURLに変更してください
+  site: 'https://kpab.github.io',
+  base: '/astro-nightwalk/',
   integrations: [tailwind(), sitemap()],
 });

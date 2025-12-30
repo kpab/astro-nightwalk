@@ -1,12 +1,11 @@
 /**
  * CityScene.ts - メインの街並みシーン管理
- * Three.jsを使用して夕方の街並みをレンダリング
+ * Three.jsを使用して惑星都市をレンダリング
  */
 
 import * as THREE from 'three';
 import { skylineConfig } from '../config/skyline.config';
-import { generateCityscape } from './buildings';
-import { setupSkyEnvironment } from './sky';
+import { generateCityscape, getSphereRadius } from './buildings';
 import {
   detectMobileDevice,
   getOptimalPixelRatio,
@@ -25,15 +24,12 @@ let visibilityObserver: IntersectionObserver | null = null;
 let frameCounter = 0;
 const FPS_CHECK_INTERVAL = 60;
 
-// カメラアニメーション用の変数
-let animationTime = 0;
-const baseCameraPosition = new THREE.Vector3();
-
-// アニメーション設定
-const CAMERA_DRIFT_SPEED = 0.0012; // カメラの前進速度（高速）
-const CAMERA_DRIFT_RANGE = 40; // 前後の移動範囲
-const CAMERA_SWAY_AMOUNT = 3; // 横揺れの量
-const CAMERA_SWAY_SPEED = 0.001; // 横揺れの速度
+// カメラ軌道アニメーション用の変数
+let orbitAngle = 0;
+const ORBIT_SPEED = 0.002; // 軌道速度
+const ORBIT_RADIUS = 180; // カメラの軌道半径
+const ORBIT_HEIGHT = 60; // カメラの高さオフセット
+const CAMERA_TILT = 0.3; // カメラの傾き（ラジアン）
 
 /**
  * 街並みシーンを初期化
@@ -47,27 +43,18 @@ export function initCityScene(canvas: HTMLCanvasElement, container: HTMLElement)
   }
 
   const isMobile = detectMobileDevice();
-  const config = skylineConfig;
 
   // シーン作成
   scene = new THREE.Scene();
 
-  // 空と太陽を作成
-  setupSkyEnvironment(scene);
-
-  // フォグ設定
-  if (config.fog.enabled) {
-    scene.fog = new THREE.Fog(config.fog.color, config.fog.near, config.fog.far);
-  }
+  // 宇宙背景
+  createSpaceBackground(scene);
 
   // カメラ設定
   const aspect = container.clientWidth / container.clientHeight;
-  camera = new THREE.PerspectiveCamera(config.camera.fov, aspect, config.camera.near, config.camera.far);
-  camera.position.set(config.camera.position.x, config.camera.position.y, config.camera.position.z);
-  camera.lookAt(config.camera.lookAt.x, config.camera.lookAt.y, config.camera.lookAt.z);
-
-  // 基本カメラ位置を保存
-  baseCameraPosition.copy(camera.position);
+  camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 2000);
+  camera.position.set(ORBIT_RADIUS, ORBIT_HEIGHT, 0);
+  camera.lookAt(0, 0, 0);
 
   // レンダラー設定
   const pixelRatio = getOptimalPixelRatio(isMobile);
@@ -80,21 +67,21 @@ export function initCityScene(canvas: HTMLCanvasElement, container: HTMLElement)
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.setPixelRatio(pixelRatio);
 
-  // トーンマッピング（よりリアルな色調）
+  // トーンマッピング
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.0;
+  renderer.toneMappingExposure = 1.2;
 
   // ライティング設定
-  setupLighting(scene, config);
+  setupLighting(scene);
 
-  // 街並み生成
+  // 街並み生成（球体上）
   generateCityscape(scene, isMobile);
 
   // リサイズハンドラ
   const resizeHandler = debounce(() => handleResize(container, isMobile), 100);
   window.addEventListener('resize', resizeHandler);
 
-  // Visibility Observer（画面外では描画を停止）
+  // Visibility Observer
   visibilityObserver = createVisibilityObserver(
     container,
     () => {
@@ -113,66 +100,82 @@ export function initCityScene(canvas: HTMLCanvasElement, container: HTMLElement)
 }
 
 /**
- * カメラのドリフトアニメーションを更新
- * 手前に流れるような動きを実現
+ * 宇宙背景を作成
  */
-function updateCameraDrift(): void {
-  animationTime += 1;
+function createSpaceBackground(scene: THREE.Scene): void {
+  // 星空のシェーダー
+  const starGeometry = new THREE.BufferGeometry();
+  const starCount = 2000;
+  const positions = new Float32Array(starCount * 3);
 
-  // 前後の動き（手前に向かってゆっくり移動し、一定距離で戻る）
-  const driftProgress = (animationTime * CAMERA_DRIFT_SPEED) % 1;
-  // イージング関数で滑らかな動きに
-  const easedProgress = easeInOutSine(driftProgress);
-  const zOffset = -easedProgress * CAMERA_DRIFT_RANGE;
+  for (let i = 0; i < starCount * 3; i += 3) {
+    // 球状に星を配置
+    const radius = 800 + Math.random() * 400;
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(2 * Math.random() - 1);
 
-  // 横方向の微小な揺れ（浮遊感）
-  const swayX = Math.sin(animationTime * CAMERA_SWAY_SPEED) * CAMERA_SWAY_AMOUNT;
-  const swayY = Math.sin(animationTime * CAMERA_SWAY_SPEED * 0.7) * CAMERA_SWAY_AMOUNT * 0.3;
+    positions[i] = radius * Math.sin(phi) * Math.cos(theta);
+    positions[i + 1] = radius * Math.cos(phi);
+    positions[i + 2] = radius * Math.sin(phi) * Math.sin(theta);
+  }
 
-  // カメラ位置を更新
-  camera.position.x = baseCameraPosition.x + swayX;
-  camera.position.y = baseCameraPosition.y + swayY;
-  camera.position.z = baseCameraPosition.z + zOffset;
+  starGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
-  // 視線は常にシーンの中心に向ける
-  camera.lookAt(
-    skylineConfig.camera.lookAt.x,
-    skylineConfig.camera.lookAt.y,
-    skylineConfig.camera.lookAt.z
-  );
-}
+  const starMaterial = new THREE.PointsMaterial({
+    color: 0xffffff,
+    size: 1.5,
+    sizeAttenuation: true,
+  });
 
-/**
- * イージング関数（サイン波）
- */
-function easeInOutSine(t: number): number {
-  return -(Math.cos(Math.PI * t) - 1) / 2;
+  const stars = new THREE.Points(starGeometry, starMaterial);
+  scene.add(stars);
+
+  // 背景色
+  scene.background = new THREE.Color(0x050510);
 }
 
 /**
  * ライティングをセットアップ
  */
-function setupLighting(scene: THREE.Scene, config: typeof skylineConfig): void {
-  // 環境光
-  const ambientLight = new THREE.AmbientLight(config.lighting.ambientColor, config.lighting.ambientIntensity);
+function setupLighting(scene: THREE.Scene): void {
+  // 環境光（弱め）
+  const ambientLight = new THREE.AmbientLight(0x4a3a6a, 0.3);
   scene.add(ambientLight);
 
-  // 太陽光（ディレクショナルライト）
-  const sunLight = new THREE.DirectionalLight(config.lighting.sunColor, config.lighting.sunIntensity);
-  sunLight.position.set(
-    config.lighting.sunPosition.x,
-    config.lighting.sunPosition.y,
-    config.lighting.sunPosition.z
-  );
+  // 太陽光（惑星の側面から）
+  const sunLight = new THREE.DirectionalLight(0xff7b00, 1.5);
+  sunLight.position.set(-200, 100, -100);
   scene.add(sunLight);
 
-  // 半球ライト（空と地面からの間接光）
-  const hemisphereLight = new THREE.HemisphereLight(
-    config.lighting.hemisphereTopColor,
-    config.lighting.hemisphereBottomColor,
-    config.lighting.hemisphereIntensity
-  );
+  // 反対側からの弱いフィルライト
+  const fillLight = new THREE.DirectionalLight(0x6688ff, 0.3);
+  fillLight.position.set(200, -50, 100);
+  scene.add(fillLight);
+
+  // 半球ライト
+  const hemisphereLight = new THREE.HemisphereLight(0xff9966, 0x1a0533, 0.4);
   scene.add(hemisphereLight);
+}
+
+/**
+ * カメラの軌道アニメーションを更新
+ */
+function updateCameraOrbit(): void {
+  orbitAngle += ORBIT_SPEED;
+
+  // 楕円軌道で回転
+  const x = Math.cos(orbitAngle) * ORBIT_RADIUS;
+  const z = Math.sin(orbitAngle) * ORBIT_RADIUS;
+  const y = Math.sin(orbitAngle * 0.5) * ORBIT_HEIGHT + ORBIT_HEIGHT;
+
+  camera.position.set(x, y, z);
+
+  // 惑星の中心を見つつ、少し上を向く
+  const lookAtY = Math.sin(orbitAngle * 0.3) * 20;
+  camera.lookAt(0, lookAtY, 0);
+
+  // カメラを少し傾ける
+  camera.rotation.z = Math.sin(orbitAngle * 0.2) * CAMERA_TILT;
 }
 
 /**
@@ -210,8 +213,8 @@ function animate(): void {
     frameCounter = 0;
   }
 
-  // カメラのドリフトアニメーション
-  updateCameraDrift();
+  // カメラ軌道アニメーション
+  updateCameraOrbit();
 
   renderer.render(scene, camera);
 }
@@ -258,20 +261,9 @@ function isWebGLSupported(): boolean {
  * フォールバック表示
  */
 function showFallback(container: HTMLElement): void {
-  container.style.background = `linear-gradient(to bottom,
-    ${hexToRgb(skylineConfig.sky.topColor)},
-    ${hexToRgb(skylineConfig.sky.middleColor)},
-    ${hexToRgb(skylineConfig.sky.bottomColor)})`;
-}
-
-/**
- * 16進数カラーをRGB文字列に変換
- */
-function hexToRgb(hex: number): string {
-  const r = (hex >> 16) & 255;
-  const g = (hex >> 8) & 255;
-  const b = hex & 255;
-  return `rgb(${r}, ${g}, ${b})`;
+  container.style.background = `radial-gradient(ellipse at center,
+    rgb(26, 5, 51) 0%,
+    rgb(5, 5, 16) 100%)`;
 }
 
 /**

@@ -82,8 +82,7 @@ astro-nightwalk/
 │   │   └── portfolio/           # Portfolio projects (Markdown/MDX)
 │   ├── layouts/
 │   │   └── BaseLayout.astro
-│   ├── lib/
-│   │   └── nightwalk/           # Three.js scene logic
+│   ├── three/                   # Three.js scene logic
 │   ├── pages/
 │   │   ├── index.astro          # Homepage with 3D hero
 │   │   ├── about.astro          # About page

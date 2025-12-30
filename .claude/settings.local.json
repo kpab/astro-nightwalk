@@ -1,6 +1,6 @@
 {
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
     "sequential-thinking"
-  ],
-  "enableAllProjectMcpServers": true
+  ]
 }

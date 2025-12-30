@@ -1,5 +1,7 @@
 ---
 // Header.astro - ナビゲーションヘッダー
+import { siteConfig } from '../config/site.config';
+
 interface Props {
   transparent?: boolean;
 }
@@ -7,11 +9,13 @@ interface Props {
 const { transparent = false } = Astro.props;
 const pathname = Astro.url.pathname;
 
-const navLinks = [
-  { href: '/', label: 'Home' },
-  { href: '/about', label: 'About' },
-  { href: '/blog', label: 'Blog' },
-];
+const navLinks = siteConfig.nav.links;
+
+// アクティブ判定（サブページも含める）
+function isActive(href: string): boolean {
+  if (href === '/') return pathname === '/';
+  return pathname.startsWith(href);
+}
 ---
 
 <header
@@ -34,7 +38,7 @@ const navLinks = [
               href={link.href}
               class:list={[
                 'text-white/80 hover:text-white transition-colors relative',
-                pathname === link.href && 'text-white after:absolute after:bottom-[-4px] after:left-0 after:right-0 after:h-0.5 after:bg-nightwalk-orange',
+                isActive(link.href) && 'text-white after:absolute after:bottom-[-4px] after:left-0 after:right-0 after:h-0.5 after:bg-nightwalk-orange',
               ]}
             >
               {link.label}
@@ -75,7 +79,7 @@ const navLinks = [
               href={link.href}
               class:list={[
                 'block text-white/80 hover:text-white transition-colors py-2',
-                pathname === link.href && 'text-nightwalk-orange',
+                isActive(link.href) && 'text-nightwalk-orange',
               ]}
             >
               {link.label}

@@ -5,6 +5,7 @@ import Footer from '../components/Footer.astro';
 import HeroScene from '../components/HeroScene.astro';
 import PortfolioCard from '../components/PortfolioCard.astro';
 import { getCollection } from 'astro:content';
+import { siteConfig } from '../config/site.config';
 
 // Featured ポートフォリオを取得
 const allPortfolio = await getCollection('portfolio');
@@ -20,15 +21,15 @@ const latestPosts = allPosts
   .slice(0, 3);
 ---
 
-<BaseLayout title="Your Name - Developer & Designer">
+<BaseLayout title={`${siteConfig.name} - ${siteConfig.title}`}>
   <Header transparent />
 
   <HeroScene>
     <h1 class="text-5xl md:text-7xl font-bold text-white mb-4 text-center drop-shadow-lg">
-      Your Name
+      {siteConfig.name}
     </h1>
     <p class="text-xl md:text-2xl text-white/80 text-center max-w-2xl px-4 mb-8">
-      Developer & Designer
+      {siteConfig.title}
     </p>
     <div class="flex flex-col sm:flex-row gap-4">
       <a

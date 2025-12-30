@@ -1,5 +1,7 @@
 ---
 // Header.astro - ナビゲーションヘッダー
+import { siteConfig } from '../config/site.config';
+
 interface Props {
   transparent?: boolean;
 }
@@ -7,12 +9,7 @@ interface Props {
 const { transparent = false } = Astro.props;
 const pathname = Astro.url.pathname;
 
-const navLinks = [
-  { href: '/', label: 'Home' },
-  { href: '/portfolio', label: 'Portfolio' },
-  { href: '/blog', label: 'Blog' },
-  { href: '/about', label: 'About' },
-];
+const navLinks = siteConfig.nav.links;
 
 // アクティブ判定（サブページも含める）
 function isActive(href: string): boolean {

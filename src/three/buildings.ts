@@ -258,7 +258,7 @@ export function createCityChunk(chunkIndex: number, isMobile: boolean): THREE.Gr
   // 道路の白線などのディテール（簡易的）
   // センターライン
   const roadLineGeo = new THREE.BoxGeometry(2, 0.1, CHUNK_SIZE);
-  const roadLineMat = new THREE.MeshBasicMaterial({ color: 0x444444 });
+  const roadLineMat = new THREE.MeshBasicMaterial({ color: 0x888888 }); // より明るくして視認性向上
   const roadLine = new THREE.Mesh(roadLineGeo, roadLineMat);
   roadLine.position.set(0, 0.1, zStart - CHUNK_SIZE / 2);
   group.add(roadLine);

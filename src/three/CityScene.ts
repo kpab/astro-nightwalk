@@ -24,8 +24,9 @@ let frameCounter = 0;
 const FPS_CHECK_INTERVAL = 60;
 
 // フライスルー設定
+// フライスルー設定
 const MOVE_SPEED = 2.0; // カメラの前進速度
-const CAMERA_HEIGHT = 15; // カメラの高さ（地上付近）
+const CAMERA_HEIGHT = 150; // カメラの高さ（高層ビルの中を飛ぶ）
 const CHUNK_COUNT = 3; // 同時に表示するチャンク数（手前から奥へ）
 
 const cityChunks: THREE.Group[] = [];
@@ -55,7 +56,8 @@ export function initCityScene(canvas: HTMLCanvasElement, container: HTMLElement)
   const aspect = container.clientWidth / container.clientHeight;
   camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 2000);
   camera.position.set(0, CAMERA_HEIGHT, 0);
-  camera.lookAt(0, CAMERA_HEIGHT, -100);
+  // 正面（やや下）を向く
+  camera.lookAt(0, CAMERA_HEIGHT - 20, -100);
 
   // レンダラー設定
   const pixelRatio = getOptimalPixelRatio(isMobile);

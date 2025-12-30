@@ -2,31 +2,23 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import { getCollection } from 'astro:content';
 
-// サンプル記事データ
-const posts = [
-  {
-    slug: 'getting-started',
-    title: 'Getting Started with Astro Nightwalk',
-    excerpt: 'Learn how to set up and customize your Astro Nightwalk theme.',
-    date: '2024-12-25',
-    readTime: '5 min read',
-  },
-  {
-    slug: 'customizing-the-cityscape',
-    title: 'Customizing the Cityscape',
-    excerpt: 'Adjust buildings, lighting, and atmosphere to match your vision.',
-    date: '2024-12-20',
-    readTime: '8 min read',
-  },
-  {
-    slug: 'performance-tips',
-    title: 'Performance Tips for Three.js',
-    excerpt: 'Optimize your 3D scenes for better mobile performance.',
-    date: '2024-12-15',
-    readTime: '6 min read',
-  },
-];
+// Content Collectionsからブログ記事を取得
+const posts = await getCollection('posts', ({ data }) => {
+  return data.draft !== true;
+});
+
+// 日付順でソート（新しい順）
+posts.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+
+// 読了時間を計算する関数
+function getReadingTime(content: string): string {
+  const wordsPerMinute = 200;
+  const words = content.split(/\s+/).length;
+  const minutes = Math.ceil(words / wordsPerMinute);
+  return `${minutes} min read`;
+}
 ---
 
 <BaseLayout title="Blog - Astro Nightwalk">
@@ -51,21 +43,29 @@ const posts = [
             posts.map((post) => (
               <article class="bg-white/5 rounded-lg p-6 hover:bg-white/10 transition-colors">
                 <a href={`/blog/${post.slug}`} class="block">
-                  <div class="flex items-center gap-4 text-sm text-white/60 mb-3">
-                    <time datetime={post.date}>
-                      {new Date(post.date).toLocaleDateString('ja-JP', {
+                  <div class="flex flex-wrap items-center gap-4 text-sm text-white/60 mb-3">
+                    <time datetime={post.data.date.toISOString()}>
+                      {post.data.date.toLocaleDateString('ja-JP', {
                         year: 'numeric',
                         month: 'long',
                         day: 'numeric',
                       })}
                     </time>
-                    <span>•</span>
-                    <span>{post.readTime}</span>
+                    {post.data.tags.length > 0 && (
+                      <>
+                        <span>•</span>
+                        <div class="flex gap-2">
+                          {post.data.tags.slice(0, 3).map((tag) => (
+                            <span class="text-nightwalk-orange">#{tag}</span>
+                          ))}
+                        </div>
+                      </>
+                    )}
                   </div>
                   <h2 class="text-xl font-bold text-white mb-2 hover:text-nightwalk-orange transition-colors">
-                    {post.title}
+                    {post.data.title}
                   </h2>
-                  <p class="text-white/70">{post.excerpt}</p>
+                  <p class="text-white/70">{post.data.description}</p>
                 </a>
               </article>
             ))

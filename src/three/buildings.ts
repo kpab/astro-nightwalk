@@ -14,16 +14,22 @@ const BUILDING_COLORS = [
   0x020202, // 限界まで黒
 ];
 
-// 窓設定（高コントラスト：完全に光るか、完全に消えるか）
-const WINDOW_COLORS = [
-  '#ffeedd', // 暖かい白（オフィス明かり）
-  '#ffffff', // 強烈な白
-  '#ccddff', // クールな白
-  '#000000', // 消灯
-  '#000000', // 消灯（多めに設定して密度を下げる）
-  '#000000',
-  '#000000',
+// 窓設定（テーマごとに分ける）
+const WINDOW_COLORS_WARM = [
+  '#ffeedd', // 暖かい白
+  '#ffccaa', // オレンジ系
+  '#ffddaa', // 薄いオレンジ
+  '#ffaa88', // 夕焼けっぽい
 ];
+
+const WINDOW_COLORS_COOL = [
+  '#ccddff', // クールな白
+  '#ddeeff', // 薄い青
+  '#aaaaff', // 青
+  '#ffffff', // 純白
+];
+
+type WindowTheme = 'warm' | 'cool' | 'mix';
 
 // チャンク設定
 export const CHUNK_SIZE = 1000;
@@ -44,7 +50,8 @@ function randomRange(min: number, max: number): number {
 function createWindowTexture(
   width: number,
   height: number,
-  baseColorStr: string // ビルのベース色
+  baseColorStr: string, // ビルのベース色
+  theme: WindowTheme
 ): THREE.CanvasTexture {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d')!;
@@ -75,7 +82,11 @@ function createWindowTexture(
   const cols = Math.floor(canvas.width / (winW + gapX));
   const rows = Math.floor(canvas.height / (winH + gapY));
 
-  // 夜なのでグラデーション反射はほぼ無し。自己発光のみで勝負。
+  // テーマに応じたカラーパレット選択
+  let palette: string[] = [];
+  if (theme === 'warm') palette = WINDOW_COLORS_WARM;
+  else if (theme === 'cool') palette = WINDOW_COLORS_COOL;
+  else palette = [...WINDOW_COLORS_WARM, ...WINDOW_COLORS_COOL];
 
   for (let row = 0; row < rows; row++) {
     // フロアごとに点灯パターンを変える（オフィスビルらしさ）
@@ -86,15 +97,20 @@ function createWindowTexture(
       const y = row * (winH + gapY) + gapY;
 
       let color = '#000000';
+
+      // 点灯判定
+      let isLit = false;
       if (floorActive) {
-        // そのフロア内でもランダムに消灯
-        if (Math.random() < 0.7) {
-          color = randomWindowColor();
-        }
+        if (Math.random() < 0.7) isLit = true;
       } else {
-        // 活動していないフロアでも稀に点いている（掃除のおじさん等）
+        if (Math.random() < 0.05) isLit = true;
+      }
+
+      if (isLit) {
+        color = palette[Math.floor(Math.random() * palette.length)];
+        // さらに稀に、テーマ違いの色が混ざる（リアルさ）
         if (Math.random() < 0.05) {
-          color = randomWindowColor();
+          color = theme === 'warm' ? WINDOW_COLORS_COOL[0] : WINDOW_COLORS_WARM[0];
         }
       }
 
@@ -112,22 +128,18 @@ function createWindowTexture(
   return texture;
 }
 
-function randomWindowColor(): string {
-  const c = WINDOW_COLORS[Math.floor(Math.random() * 3)]; // 黒以外を選ぶ
-  return c || '#ffffff';
-}
-
 /**
  * ビル用マテリアルを作成
  */
 function createBuildingMaterial(
   width: number,
   height: number,
-  baseColor: number
+  baseColor: number,
+  theme: WindowTheme
 ): THREE.MeshStandardMaterial {
   const colorStr = '#' + baseColor.toString(16).padStart(6, '0');
 
-  const windowTexture = createWindowTexture(width, height, colorStr);
+  const windowTexture = createWindowTexture(width, height, colorStr, theme);
   const emissiveTexture = windowTexture.clone();
 
   return new THREE.MeshStandardMaterial({
@@ -156,7 +168,14 @@ function createComplexAvailableBuilding(
   group.position.set(x, 0, z);
 
   const color = BUILDING_COLORS[Math.floor(Math.random() * BUILDING_COLORS.length)];
-  const mat = createBuildingMaterial(width, height, color);
+
+  // 窓の明かりのテーマ（暖色系、寒色系、ミックス）をランダムに決定
+  const r = Math.random();
+  let theme: WindowTheme = 'mix';
+  if (r < 0.4) theme = 'warm'; // 40% 暖色
+  else if (r < 0.8) theme = 'cool'; // 40% 寒色
+
+  const mat = createBuildingMaterial(width, height, color, theme);
 
   const type = Math.random();
 

@@ -6,7 +6,7 @@ import { getCollection, type CollectionEntry } from 'astro:content';
 import { siteConfig } from '../../config/site.config';
 
 // Content Collectionsからブログ記事を取得
-const posts = await getCollection('posts', ({ data }: CollectionEntry<'posts'>) => {
+const posts = await getCollection('posts', ({ data }) => {
   return data.draft !== true;
 });
 

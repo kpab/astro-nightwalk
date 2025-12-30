@@ -23,7 +23,17 @@ let animationId: number;
 let isVisible = true;
 let visibilityObserver: IntersectionObserver | null = null;
 let frameCounter = 0;
-const FPS_CHECK_INTERVAL = 60; // 60フレームごとにFPSをチェック
+const FPS_CHECK_INTERVAL = 60;
+
+// カメラアニメーション用の変数
+let animationTime = 0;
+const baseCameraPosition = new THREE.Vector3();
+
+// アニメーション設定
+const CAMERA_DRIFT_SPEED = 0.0012; // カメラの前進速度（高速）
+const CAMERA_DRIFT_RANGE = 40; // 前後の移動範囲
+const CAMERA_SWAY_AMOUNT = 3; // 横揺れの量
+const CAMERA_SWAY_SPEED = 0.001; // 横揺れの速度
 
 /**
  * 街並みシーンを初期化
@@ -55,6 +65,9 @@ export function initCityScene(canvas: HTMLCanvasElement, container: HTMLElement)
   camera = new THREE.PerspectiveCamera(config.camera.fov, aspect, config.camera.near, config.camera.far);
   camera.position.set(config.camera.position.x, config.camera.position.y, config.camera.position.z);
   camera.lookAt(config.camera.lookAt.x, config.camera.lookAt.y, config.camera.lookAt.z);
+
+  // 基本カメラ位置を保存
+  baseCameraPosition.copy(camera.position);
 
   // レンダラー設定
   const pixelRatio = getOptimalPixelRatio(isMobile);
@@ -97,6 +110,43 @@ export function initCityScene(canvas: HTMLCanvasElement, container: HTMLElement)
 
   // アニメーションループ開始
   animate();
+}
+
+/**
+ * カメラのドリフトアニメーションを更新
+ * 手前に流れるような動きを実現
+ */
+function updateCameraDrift(): void {
+  animationTime += 1;
+
+  // 前後の動き（手前に向かってゆっくり移動し、一定距離で戻る）
+  const driftProgress = (animationTime * CAMERA_DRIFT_SPEED) % 1;
+  // イージング関数で滑らかな動きに
+  const easedProgress = easeInOutSine(driftProgress);
+  const zOffset = -easedProgress * CAMERA_DRIFT_RANGE;
+
+  // 横方向の微小な揺れ（浮遊感）
+  const swayX = Math.sin(animationTime * CAMERA_SWAY_SPEED) * CAMERA_SWAY_AMOUNT;
+  const swayY = Math.sin(animationTime * CAMERA_SWAY_SPEED * 0.7) * CAMERA_SWAY_AMOUNT * 0.3;
+
+  // カメラ位置を更新
+  camera.position.x = baseCameraPosition.x + swayX;
+  camera.position.y = baseCameraPosition.y + swayY;
+  camera.position.z = baseCameraPosition.z + zOffset;
+
+  // 視線は常にシーンの中心に向ける
+  camera.lookAt(
+    skylineConfig.camera.lookAt.x,
+    skylineConfig.camera.lookAt.y,
+    skylineConfig.camera.lookAt.z
+  );
+}
+
+/**
+ * イージング関数（サイン波）
+ */
+function easeInOutSine(t: number): number {
+  return -(Math.cos(Math.PI * t) - 1) / 2;
 }
 
 /**
@@ -159,6 +209,9 @@ function animate(): void {
     }
     frameCounter = 0;
   }
+
+  // カメラのドリフトアニメーション
+  updateCameraDrift();
 
   renderer.render(scene, camera);
 }

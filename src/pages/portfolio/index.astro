@@ -1,0 +1,55 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import PortfolioCard from '../../components/PortfolioCard.astro';
+import { getCollection } from 'astro:content';
+
+// Content Collectionsからポートフォリオを取得
+const allPortfolio = await getCollection('portfolio');
+
+// featuredを先に、その後日付順でソート
+const portfolio = allPortfolio.sort((a, b) => {
+  if (a.data.featured && !b.data.featured) return -1;
+  if (!a.data.featured && b.data.featured) return 1;
+  return b.data.date.valueOf() - a.data.date.valueOf();
+});
+---
+
+<BaseLayout title="Portfolio - Astro Nightwalk">
+  <Header />
+
+  <main class="pt-20">
+    <!-- Hero Section -->
+    <section class="bg-gradient-to-b from-nightwalk-dark to-nightwalk-purple py-20">
+      <div class="container mx-auto px-4">
+        <h1 class="text-4xl md:text-5xl font-bold text-white mb-6">Portfolio</h1>
+        <p class="text-xl text-white/80 max-w-2xl">
+          A showcase of my projects and work. From web applications to developer tools.
+        </p>
+      </div>
+    </section>
+
+    <!-- Portfolio Grid -->
+    <section class="py-16 bg-nightwalk-dark">
+      <div class="container mx-auto px-4">
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+          {
+            portfolio.map((project) => (
+              <PortfolioCard
+                title={project.data.title}
+                description={project.data.description}
+                slug={project.slug}
+                image={project.data.image}
+                tags={project.data.tags}
+                featured={project.data.featured}
+              />
+            ))
+          }
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</BaseLayout>

@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { skylineConfig } from '../config/skyline.config';
 import { generateCityscape } from './buildings';
+import { setupSkyEnvironment } from './sky';
 
 let scene: THREE.Scene;
 let camera: THREE.PerspectiveCamera;
@@ -34,7 +35,10 @@ export function initCityScene(canvas: HTMLCanvasElement, container: HTMLElement)
 
   // シーン作成
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(config.sky.topColor);
+  // 背景は空のシェーダーで描画するため、ここでは設定しない
+
+  // 空と太陽を作成
+  setupSkyEnvironment(scene);
 
   // フォグ設定
   if (config.fog.enabled) {

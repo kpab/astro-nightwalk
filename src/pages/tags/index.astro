@@ -4,9 +4,9 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import { getCollection } from 'astro:content';
 
-// 全コレクションからタグを収集
-const posts = await getCollection('posts');
-const portfolio = await getCollection('portfolio');
+// 全コレクションからタグを収集（draft は除外）
+const posts = (await getCollection('posts')).filter(({ data }) => data.draft !== true);
+const portfolio = (await getCollection('portfolio')).filter(({ data }) => data.draft !== true);
 
 // タグをカウント
 const tagCounts = new Map<string, { posts: number; portfolio: number }>();

@@ -4,7 +4,7 @@
  */
 
 import * as THREE from 'three';
-import { skylineConfig } from '../config/skyline.config';
+import { nightwalkConfig } from '../config/nightwalk.config';
 
 interface PerformanceMetrics {
   fps: number;
@@ -35,7 +35,7 @@ export function detectMobileDevice(): boolean {
  * 最適なピクセル比を取得
  */
 export function getOptimalPixelRatio(isMobile: boolean): number {
-  const config = skylineConfig.performance;
+  const config = nightwalkConfig.performance;
   const devicePixelRatio = window.devicePixelRatio || 1;
 
   if (isMobile) {
@@ -171,7 +171,7 @@ export function getMobileTextureScale(): number {
  * モバイル用のビル数を取得
  */
 export function getOptimalBuildingCount(isMobile: boolean): number {
-  const config = skylineConfig;
+  const config = nightwalkConfig;
 
   if (isMobile) {
     return config.performance.mobileBuildingCount;

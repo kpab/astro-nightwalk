@@ -1,9 +1,9 @@
 /**
- * skyline.config.ts - 街並みテーマの設定
+ * nightwalk.config.ts - 夜景の街並みテーマの設定
  * ユーザーがカスタマイズ可能な設定項目
  */
 
-export const skylineConfig = {
+export const nightwalkConfig = {
   // ビル設定
   buildings: {
     count: 60, // ビルの数
@@ -62,4 +62,4 @@ export const skylineConfig = {
   },
 };
 
-export type SkylineConfig = typeof skylineConfig;
+export type NightwalkConfig = typeof nightwalkConfig;

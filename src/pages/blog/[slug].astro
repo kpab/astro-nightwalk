@@ -6,10 +6,10 @@ import Footer from '../../components/Footer.astro';
 export function getStaticPaths() {
   const posts: Record<string, { title: string; date: string; content: string }> = {
     'getting-started': {
-      title: 'Getting Started with Astro Skyline',
+      title: 'Getting Started with Astro Nightwalk',
       date: '2024-12-25',
       content: `
-        <p>Welcome to Astro Skyline! This guide will help you get started with our beautiful Three.js cityscape theme.</p>
+        <p>Welcome to Astro Nightwalk! This guide will help you get started with our beautiful Three.js night city walkthrough theme.</p>
 
         <h2>Installation</h2>
         <p>Clone the repository and install dependencies:</p>
@@ -20,7 +20,7 @@ export function getStaticPaths() {
         <pre><code>npm run dev</code></pre>
 
         <h2>Configuration</h2>
-        <p>Edit <code>src/config/skyline.config.ts</code> to customize the cityscape.</p>
+        <p>Edit <code>src/config/nightwalk.config.ts</code> to customize the cityscape.</p>
       `,
     },
     'customizing-the-cityscape': {
@@ -74,12 +74,12 @@ interface Props {
 const { post } = Astro.props;
 ---
 
-<BaseLayout title={`${post.title} - Astro Skyline`}>
+<BaseLayout title={`${post.title} - Astro Nightwalk`}>
   <Header />
 
   <main class="pt-20">
     <!-- Article Header -->
-    <section class="bg-gradient-to-b from-skyline-dark to-skyline-purple py-20">
+    <section class="bg-gradient-to-b from-nightwalk-dark to-nightwalk-purple py-20">
       <div class="container mx-auto px-4">
         <div class="max-w-3xl mx-auto">
           <a
@@ -104,7 +104,7 @@ const { post } = Astro.props;
     </section>
 
     <!-- Article Content -->
-    <section class="py-16 bg-skyline-dark">
+    <section class="py-16 bg-nightwalk-dark">
       <div class="container mx-auto px-4">
         <article class="max-w-3xl mx-auto prose prose-invert prose-lg">
           <div set:html={post.content} />
@@ -130,7 +130,7 @@ const { post } = Astro.props;
   }
 
   article :global(code) {
-    @apply text-skyline-orange;
+    @apply text-nightwalk-orange;
   }
 
   article :global(pre code) {

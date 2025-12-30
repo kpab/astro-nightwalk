@@ -4,8 +4,8 @@ export default {
   theme: {
     extend: {
       colors: {
-        // 夕方の街並みテーマカラー
-        skyline: {
+        // 夜の街並みテーマカラー
+        nightwalk: {
           dark: '#1a0533',
           purple: '#4a3a6a',
           orange: '#ff6b35',

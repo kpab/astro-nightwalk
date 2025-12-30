@@ -1,10 +1,10 @@
 /**
- * sky.ts - 夕方の空のレンダリング
+ * sky.ts - 夜の空のレンダリング
  * グラデーションシェーダーを使用した空の表現
  */
 
 import * as THREE from 'three';
-import { skylineConfig } from '../config/skyline.config';
+import { nightwalkConfig } from '../config/nightwalk.config';
 
 // 空のシェーダー
 const skyVertexShader = `
@@ -54,7 +54,7 @@ const skyFragmentShader = `
  * 空のドームを作成
  */
 export function createSky(scene: THREE.Scene): THREE.Mesh {
-  const config = skylineConfig.sky;
+  const config = nightwalkConfig.sky;
 
   // 大きな球体ジオメトリを作成（内側を向く）
   const skyGeometry = new THREE.SphereGeometry(500, 32, 32);
@@ -84,7 +84,7 @@ export function createSky(scene: THREE.Scene): THREE.Mesh {
  * 太陽を表現するグローエフェクト
  */
 export function createSunGlow(scene: THREE.Scene): THREE.Mesh {
-  const config = skylineConfig.lighting;
+  const config = nightwalkConfig.lighting;
 
   // 太陽のグローを表現するスプライト用のジオメトリ
   const sunGeometry = new THREE.PlaneGeometry(100, 100);

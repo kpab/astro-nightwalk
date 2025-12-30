@@ -8,7 +8,7 @@
   }
 
   body {
-    @apply bg-skyline-dark text-white antialiased;
+    @apply bg-nightwalk-dark text-white antialiased;
   }
 }
 

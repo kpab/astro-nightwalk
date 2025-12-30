@@ -17,12 +17,12 @@ const navLinks = [
 <header
   class:list={[
     'fixed top-0 left-0 right-0 z-50 transition-colors duration-300',
-    transparent ? 'bg-transparent' : 'bg-skyline-dark/90 backdrop-blur-sm',
+    transparent ? 'bg-transparent' : 'bg-nightwalk-dark/90 backdrop-blur-sm',
   ]}
 >
   <nav class="container mx-auto px-4 py-4 flex items-center justify-between">
-    <a href="/" class="text-xl font-bold text-white hover:text-skyline-orange transition-colors">
-      Skyline
+    <a href="/" class="text-xl font-bold text-white hover:text-nightwalk-orange transition-colors">
+      Nightwalk
     </a>
 
     <!-- Desktop Navigation -->
@@ -34,7 +34,7 @@ const navLinks = [
               href={link.href}
               class:list={[
                 'text-white/80 hover:text-white transition-colors relative',
-                pathname === link.href && 'text-white after:absolute after:bottom-[-4px] after:left-0 after:right-0 after:h-0.5 after:bg-skyline-orange',
+                pathname === link.href && 'text-white after:absolute after:bottom-[-4px] after:left-0 after:right-0 after:h-0.5 after:bg-nightwalk-orange',
               ]}
             >
               {link.label}
@@ -65,7 +65,7 @@ const navLinks = [
   <!-- Mobile Navigation -->
   <div
     id="mobile-menu"
-    class="hidden md:hidden bg-skyline-dark/95 backdrop-blur-sm"
+    class="hidden md:hidden bg-nightwalk-dark/95 backdrop-blur-sm"
   >
     <ul class="container mx-auto px-4 py-4 flex flex-col gap-4">
       {
@@ -75,7 +75,7 @@ const navLinks = [
               href={link.href}
               class:list={[
                 'block text-white/80 hover:text-white transition-colors py-2',
-                pathname === link.href && 'text-skyline-orange',
+                pathname === link.href && 'text-nightwalk-orange',
               ]}
             >
               {link.label}

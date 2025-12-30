@@ -1,8 +1,8 @@
 {
-  "name": "astro-skyline",
+  "name": "astro-nightwalk",
   "type": "module",
   "version": "0.1.0",
-  "description": "Astro theme with Three.js evening cityscape hero section",
+  "description": "Astro theme with Three.js night city walkthrough",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",

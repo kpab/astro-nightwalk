@@ -47,6 +47,55 @@ function randomRange(min: number, max: number): number {
 }
 
 /**
+ * Meshにシャドウ設定を適用するヘルパー関数
+ */
+function applyMeshShadows(mesh: THREE.Mesh): THREE.Mesh {
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
+/**
+ * ビルディングメッシュを作成するヘルパー関数
+ */
+function createBuildingMesh(
+  geometry: THREE.BoxGeometry,
+  material: THREE.Material,
+  position?: { x?: number; y?: number; z?: number }
+): THREE.Mesh {
+  const mesh = new THREE.Mesh(geometry, material);
+  if (position) {
+    if (position.x !== undefined) mesh.position.x = position.x;
+    if (position.y !== undefined) mesh.position.y = position.y;
+    if (position.z !== undefined) mesh.position.z = position.z;
+  }
+  return applyMeshShadows(mesh);
+}
+
+/**
+ * 窓パターンの設定を取得
+ */
+interface WindowPattern {
+  winW: number;
+  winH: number;
+  gapX: number;
+  gapY: number;
+}
+
+function getWindowPattern(style: number): WindowPattern {
+  if (style < 0.4) {
+    // 標準オフィス
+    return { winW: 4, winH: 8, gapX: 4, gapY: 6 };
+  } else if (style < 0.7) {
+    // スリット
+    return { winW: 2, winH: 20, gapX: 6, gapY: 4 };
+  } else {
+    // グリッド
+    return { winW: 8, winH: 8, gapX: 4, gapY: 4 };
+  }
+}
+
+/**
  * 高精細な窓テクスチャをCanvasで生成
  * 闇に浮かぶ光のグリッドを作成
  */
@@ -68,19 +117,7 @@ function createWindowTexture(
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // 窓パターン
-  const style = Math.random();
-  let winW, winH, gapX, gapY;
-
-  if (style < 0.4) {
-    // 標準オフィス
-    winW = 4; winH = 8; gapX = 4; gapY = 6;
-  } else if (style < 0.7) {
-    // スリット
-    winW = 2; winH = 20; gapX = 6; gapY = 4;
-  } else {
-    // グリッド
-    winW = 8; winH = 8; gapX = 4; gapY = 4;
-  }
+  const { winW, winH, gapX, gapY } = getWindowPattern(Math.random());
 
   const cols = Math.floor(canvas.width / (winW + gapX));
   const rows = Math.floor(canvas.height / (winH + gapY));
@@ -186,10 +223,7 @@ function createComplexAvailableBuilding(
     // L字型 / 組み合わせ型
     // メイン
     const mainGeo = new THREE.BoxGeometry(width, height, depth * 0.6);
-    const mainMesh = new THREE.Mesh(mainGeo, mat);
-    mainMesh.position.set(0, height / 2, -depth * 0.2);
-    mainMesh.castShadow = true;
-    mainMesh.receiveShadow = true;
+    const mainMesh = createBuildingMesh(mainGeo, mat, { y: height / 2, z: -depth * 0.2 });
     group.add(mainMesh);
 
     // サブ（低層部）
@@ -197,10 +231,7 @@ function createComplexAvailableBuilding(
     const subGeo = new THREE.BoxGeometry(width * 0.6, subH, depth * 0.4);
     // マテリアル再生成は高負荷なので使い回すが、UVが合うかは微妙。
     // 本当はUV調整が必要だが、今回は簡易的に同じマテリアル
-    const subMesh = new THREE.Mesh(subGeo, mat);
-    subMesh.position.set(width * 0.2, subH / 2, depth * 0.3);
-    subMesh.castShadow = true;
-    subMesh.receiveShadow = true;
+    const subMesh = createBuildingMesh(subGeo, mat, { x: width * 0.2, y: subH / 2, z: depth * 0.3 });
     group.add(subMesh);
 
     addRoofDetails(group, width, depth * 0.6, height, 0, -depth * 0.2);
@@ -214,38 +245,26 @@ function createComplexAvailableBuilding(
     const h3 = height * 0.25;
 
     // 下段
-    const m1 = new THREE.Mesh(new THREE.BoxGeometry(width, h1, depth), mat);
-    m1.position.y = h1 / 2;
-    m1.castShadow = true;
-    m1.receiveShadow = true;
+    const m1 = createBuildingMesh(new THREE.BoxGeometry(width, h1, depth), mat, { y: h1 / 2 });
     group.add(m1);
 
     // 中段
     const w2 = width * 0.8;
     const d2 = depth * 0.8;
-    const m2 = new THREE.Mesh(new THREE.BoxGeometry(w2, h2, d2), mat);
-    m2.position.y = h1 + h2 / 2;
-    m2.castShadow = true;
-    m2.receiveShadow = true;
+    const m2 = createBuildingMesh(new THREE.BoxGeometry(w2, h2, d2), mat, { y: h1 + h2 / 2 });
     group.add(m2);
 
     // 上段
     const w3 = width * 0.6;
     const d3 = depth * 0.6;
-    const m3 = new THREE.Mesh(new THREE.BoxGeometry(w3, h3, d3), mat);
-    m3.position.y = h1 + h2 + h3 / 2;
-    m3.castShadow = true;
-    m3.receiveShadow = true;
+    const m3 = createBuildingMesh(new THREE.BoxGeometry(w3, h3, d3), mat, { y: h1 + h2 + h3 / 2 });
     group.add(m3);
 
     addRoofDetails(group, w3, d3, height);
   } else {
     // スタンダード + 縦ルーバー（フィン）表現
     // 実際にはテクスチャでやるのが軽量だが、ジオメトリで薄い板を置く
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), mat);
-    mesh.position.y = height / 2;
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
+    const mesh = createBuildingMesh(new THREE.BoxGeometry(width, height, depth), mat, { y: height / 2 });
     group.add(mesh);
 
     // フィンを追加（数個）

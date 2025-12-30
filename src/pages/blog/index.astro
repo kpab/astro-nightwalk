@@ -11,10 +11,11 @@ const posts = await getCollection('posts', ({ data }: CollectionEntry<'posts'>) 
 });
 
 // 日付順でソート（新しい順）
-posts.sort((a: CollectionEntry<'posts'>, b: CollectionEntry<'posts'>) => b.data.date.valueOf() - a.data.date.valueOf());
+posts.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+
 ---
 
-<BaseLayout title={`${siteConfig.blog.title} - ${siteConfig.name}`} description={siteConfig.blog.description}>
+<BaseLayout title="Blog - Astro Nightwalk">
   <Header />
 
   <main id="main-content" class="pt-20">

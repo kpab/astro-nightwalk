@@ -65,7 +65,7 @@
 
   /* Card hover effect */
   .card-hover {
-    @apply transition-all duration-200 ease-out cursor-pointer;
+    @apply transition-all duration-200 ease-out;
   }
 
   .card-hover:hover {

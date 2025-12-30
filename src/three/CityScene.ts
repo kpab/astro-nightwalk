@@ -48,17 +48,15 @@ export function initCityScene(canvas: HTMLCanvasElement, container: HTMLElement)
   // シーン作成
   scene = new THREE.Scene();
 
-  // フォグ設定（夕暮れの紫〜群青色のグラデーションを模写）
-  // 完全に真っ暗ではなく、深い紫味のある色
-  const fogColor = 0x2d1b4e;
-  scene.fog = new THREE.FogExp2(fogColor, 0.0012);
+  // フォグ設定（真夜中の闇）
+  const fogColor = 0x020205;
+  scene.fog = new THREE.FogExp2(fogColor, 0.002); // 濃い目のフォグで奥を完全に隠す
   scene.background = new THREE.Color(fogColor);
 
   // カメラ設定
   const aspect = container.clientWidth / container.clientHeight;
-  camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 2000);
+  camera = new THREE.PerspectiveCamera(60, aspect, 0.1, 3000);
   camera.position.set(0, CAMERA_HEIGHT, 0);
-  // 正面（やや下）を向く
   camera.lookAt(0, CAMERA_HEIGHT - 20, -100);
 
   // レンダラー設定
@@ -71,10 +69,13 @@ export function initCityScene(canvas: HTMLCanvasElement, container: HTMLElement)
   });
   renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.setPixelRatio(pixelRatio);
+  // 影を有効化
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   // トーンマッピング
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.1; // 夕暮れの明るさを確保
+  renderer.toneMappingExposure = 1.0;
 
   // ライティング設定
   setupLighting(scene);
@@ -108,7 +109,6 @@ export function initCityScene(canvas: HTMLCanvasElement, container: HTMLElement)
  * 初期の街並みチャンクを生成
  */
 function initCityChunks(scene: THREE.Scene, isMobile: boolean): void {
-  // 既存のチャンクがあれば削除
   cityChunks.forEach(chunk => scene.remove(chunk));
   cityChunks.length = 0;
   totalDistance = 0;
@@ -121,28 +121,26 @@ function initCityChunks(scene: THREE.Scene, isMobile: boolean): void {
 }
 
 /**
- * ライティングをセットアップ（夕暮れ）
+ * ライティングをセットアップ（真夜中）
  */
 function setupLighting(scene: THREE.Scene): void {
-  // 環境光（空からの散乱光：紫系）
-  const ambientLight = new THREE.AmbientLight(0x4a3a6a, 0.6);
+  // 環境光（非常に弱く、シルエットを作る）
+  const ambientLight = new THREE.AmbientLight(0x111118, 0.1);
   scene.add(ambientLight);
 
-  // 沈む夕日（強く暖かいオレンジ色の指向性ライト）
-  // 低い角度から
-  const sunLight = new THREE.DirectionalLight(0xffaa33, 1.5);
-  sunLight.position.set(-100, 50, -100); // 左前方奥から照らすイメージ
-  sunLight.castShadow = true;
-  scene.add(sunLight);
+  // 月明かり（青白く静かな光）
+  const moonLight = new THREE.DirectionalLight(0xaaccff, 0.5);
+  moonLight.position.set(100, 200, 50);
+  moonLight.castShadow = true;
 
-  // シティグロウ（地上の喧騒：ピンク/オレンジ系）
-  const cityGlow = new THREE.HemisphereLight(0xff6666, 0x111122, 0.4);
+  // シャドウ設定
+  moonLight.shadow.mapSize.width = 1024;
+  moonLight.shadow.mapSize.height = 1024;
+  scene.add(moonLight);
+
+  // シティグロウ（下からわずかに明るく）
+  const cityGlow = new THREE.HemisphereLight(0x000000, 0x111122, 0.2);
   scene.add(cityGlow);
-
-  // 補助的なポイントライト（特定のビルの反射用、適当に散らすと重いので1つだけ象徴的に）
-  // const pointLight = new THREE.PointLight(0xff4422, 1, 500);
-  // pointLight.position.set(0, 100, -200);
-  // scene.add(pointLight);
 }
 
 /**

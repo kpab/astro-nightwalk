@@ -15,7 +15,7 @@ const featuredPortfolio = allPortfolio
   .slice(0, 3);
 
 // 最新ブログ記事を取得
-const allPosts = await getCollection('posts', ({ data }: CollectionEntry<'posts'>) => !data.draft);
+const allPosts = await getCollection('posts', (entry: CollectionEntry<'posts'>) => !entry.data.draft);
 const latestPosts = allPosts
   .sort((a: CollectionEntry<'posts'>, b: CollectionEntry<'posts'>) => b.data.date.valueOf() - a.data.date.valueOf())
   .slice(0, 3);

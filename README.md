@@ -181,7 +181,7 @@ Create a new file in `src/content/posts/`:
 ---
 title: "Your Post Title"
 description: "A brief description"
-date: 2024-01-15
+date: 2025-01-15
 tags: ["astro", "web"]
 image: "/images/post-image.jpg"
 draft: false
@@ -198,7 +198,7 @@ Create a new file in `src/content/portfolio/`:
 ---
 title: "Project Name"
 description: "Project description"
-date: 2024-01-15
+date: 2025-01-15
 tags: ["react", "typescript"]
 image: "/images/project.jpg"
 url: "https://project-demo.com"

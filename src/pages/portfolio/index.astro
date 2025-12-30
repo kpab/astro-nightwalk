@@ -3,36 +3,37 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import PortfolioCard from '../../components/PortfolioCard.astro';
-import { getCollection } from 'astro:content';
+import { getCollection, type CollectionEntry } from 'astro:content';
+import { siteConfig } from '../../config/site.config';
 
 // Content Collectionsからポートフォリオを取得
 const allPortfolio = await getCollection('portfolio');
 
 // featuredを先に、その後日付順でソート
-const portfolio = allPortfolio.sort((a, b) => {
+const portfolio = allPortfolio.sort((a: CollectionEntry<'portfolio'>, b: CollectionEntry<'portfolio'>) => {
   if (a.data.featured && !b.data.featured) return -1;
   if (!a.data.featured && b.data.featured) return 1;
   return b.data.date.valueOf() - a.data.date.valueOf();
 });
 ---
 
-<BaseLayout title="Portfolio - Astro Nightwalk">
+<BaseLayout title={`${siteConfig.portfolio.title} - ${siteConfig.name}`} description={siteConfig.portfolio.description}>
   <Header />
 
-  <main class="pt-20">
+  <main id="main-content" class="pt-20">
     <!-- Hero Section -->
     <section class="bg-gradient-to-b from-nightwalk-dark to-nightwalk-purple py-20">
-      <div class="container mx-auto px-4">
-        <h1 class="text-4xl md:text-5xl font-bold text-white mb-6">Portfolio</h1>
+      <div class="section-container">
+        <h1 class="text-4xl md:text-5xl font-bold text-white mb-6">{siteConfig.portfolio.title}</h1>
         <p class="text-xl text-white/80 max-w-2xl">
-          A showcase of my projects and work. From web applications to developer tools.
+          {siteConfig.portfolio.description}
         </p>
       </div>
     </section>
 
     <!-- Portfolio Grid -->
     <section class="py-16 bg-nightwalk-dark">
-      <div class="container mx-auto px-4">
+      <div class="section-container">
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
           {
             portfolio.map((project) => (

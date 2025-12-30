@@ -24,8 +24,11 @@ function isActive(href: string): boolean {
     transparent ? 'bg-transparent' : 'bg-nightwalk-dark/90 backdrop-blur-sm',
   ]}
 >
-  <nav class="container mx-auto px-4 py-4 flex items-center justify-between">
-    <a href="/" class="text-xl font-bold text-white hover:text-nightwalk-orange transition-colors">
+  <nav class="container mx-auto px-4 md:px-6 lg:px-8 py-4 flex items-center justify-between">
+    <a
+      href="/"
+      class="text-xl font-bold text-white hover:text-nightwalk-orange transition-colors focus:outline-none focus:ring-2 focus:ring-nightwalk-orange focus:ring-offset-2 focus:ring-offset-nightwalk-dark rounded"
+    >
       Nightwalk
     </a>
 
@@ -37,7 +40,7 @@ function isActive(href: string): boolean {
             <a
               href={link.href}
               class:list={[
-                'text-white/80 hover:text-white transition-colors relative',
+                'text-white/80 hover:text-white transition-colors relative focus:outline-none focus:ring-2 focus:ring-nightwalk-orange rounded px-1 py-0.5',
                 isActive(link.href) && 'text-white after:absolute after:bottom-[-4px] after:left-0 after:right-0 after:h-0.5 after:bg-nightwalk-orange',
               ]}
             >
@@ -50,35 +53,46 @@ function isActive(href: string): boolean {
 
     <!-- Mobile Menu Button -->
     <button
-      id="mobile-menu-btn"
-      class="md:hidden text-white p-2"
-      aria-label="Toggle menu"
-      aria-expanded="false"
-    >
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M4 6h16M4 12h16M4 18h16"
-        />
-      </svg>
-    </button>
+        id="mobile-menu-btn"
+        type="button"
+        class="md:hidden text-white p-2 focus:outline-none focus:ring-2 focus:ring-nightwalk-orange rounded-lg"
+        aria-label="メニューを開く"
+        aria-expanded="false"
+        aria-controls="mobile-menu"
+      >
+        <svg id="menu-icon-open" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 6h16M4 12h16M4 18h16"
+          />
+        </svg>
+        <svg id="menu-icon-close" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M6 18L18 6M6 6l12 12"
+          />
+        </svg>
+      </button>
   </nav>
 
   <!-- Mobile Navigation -->
   <div
     id="mobile-menu"
-    class="hidden md:hidden bg-nightwalk-dark/95 backdrop-blur-sm"
+    class="mobile-menu md:hidden bg-nightwalk-dark/95 backdrop-blur-sm overflow-hidden"
+    aria-hidden="true"
   >
-    <ul class="container mx-auto px-4 py-4 flex flex-col gap-4">
+    <ul class="container mx-auto px-4 md:px-6 py-4 flex flex-col gap-4">
       {
         navLinks.map((link) => (
           <li>
             <a
               href={link.href}
               class:list={[
-                'block text-white/80 hover:text-white transition-colors py-2',
+                'block text-white/80 hover:text-white transition-colors py-2 focus:outline-none focus:ring-2 focus:ring-nightwalk-orange rounded px-2',
                 isActive(link.href) && 'text-nightwalk-orange',
               ]}
             >
@@ -92,12 +106,54 @@ function isActive(href: string): boolean {
 </header>
 
 <script>
+  // Mobile Menu
   const menuBtn = document.getElementById('mobile-menu-btn');
   const mobileMenu = document.getElementById('mobile-menu');
+  const menuIconOpen = document.getElementById('menu-icon-open');
+  const menuIconClose = document.getElementById('menu-icon-close');
 
-  menuBtn?.addEventListener('click', () => {
-    const isExpanded = menuBtn.getAttribute('aria-expanded') === 'true';
-    menuBtn.setAttribute('aria-expanded', String(!isExpanded));
-    mobileMenu?.classList.toggle('hidden');
+  function toggleMenu(open?: boolean) {
+    const isExpanded = open ?? menuBtn?.getAttribute('aria-expanded') !== 'true';
+
+    menuBtn?.setAttribute('aria-expanded', String(isExpanded));
+    menuBtn?.setAttribute('aria-label', isExpanded ? 'メニューを閉じる' : 'メニューを開く');
+    mobileMenu?.setAttribute('aria-hidden', String(!isExpanded));
+    mobileMenu?.classList.toggle('open', isExpanded);
+    menuIconOpen?.classList.toggle('hidden', isExpanded);
+    menuIconClose?.classList.toggle('hidden', !isExpanded);
+  }
+
+  menuBtn?.addEventListener('click', () => toggleMenu());
+
+  // Close menu on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && menuBtn?.getAttribute('aria-expanded') === 'true') {
+      toggleMenu(false);
+      menuBtn?.focus();
+    }
   });
+
+  // Close menu when clicking outside
+  document.addEventListener('click', (e) => {
+    const target = e.target as Node;
+    if (
+      menuBtn?.getAttribute('aria-expanded') === 'true' &&
+      !mobileMenu?.contains(target) &&
+      !menuBtn?.contains(target)
+    ) {
+      toggleMenu(false);
+    }
+  });
+
 </script>
+
+<style>
+  .mobile-menu {
+    max-height: 0;
+    transition: max-height 0.3s ease-out;
+  }
+
+  .mobile-menu.open {
+    max-height: 300px;
+  }
+</style>

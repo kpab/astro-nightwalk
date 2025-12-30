@@ -7,6 +7,12 @@
   <div class="hero-content">
     <slot />
   </div>
+  <!-- Static fallback for reduced motion or no WebGL -->
+  <div id="hero-fallback" class="absolute inset-0 bg-gradient-to-b from-nightwalk-dark via-nightwalk-purple to-nightwalk-orange hidden">
+    <div class="hero-content">
+      <slot />
+    </div>
+  </div>
   <noscript>
     <div class="absolute inset-0 bg-gradient-to-b from-nightwalk-dark via-nightwalk-purple to-nightwalk-orange">
       <div class="hero-content">
@@ -21,8 +27,33 @@
 
   const container = document.getElementById('hero-canvas-container');
   const canvas = document.getElementById('hero-canvas') as HTMLCanvasElement;
+  const fallback = document.getElementById('hero-fallback');
+
+  // Check for reduced motion preference
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   if (canvas && container) {
-    initCityScene(canvas, container);
+    if (prefersReducedMotion) {
+      // Show static fallback for users who prefer reduced motion
+      canvas.style.display = 'none';
+      fallback?.classList.remove('hidden');
+    } else {
+      initCityScene(canvas, container);
+    }
   }
+
+  // Listen for changes to reduced motion preference
+  window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', (e) => {
+    if (e.matches) {
+      canvas.style.display = 'none';
+      fallback?.classList.remove('hidden');
+      // Note: CityScene should handle cleanup via visibility observer
+    } else {
+      canvas.style.display = 'block';
+      fallback?.classList.add('hidden');
+      if (canvas && container) {
+        initCityScene(canvas, container);
+      }
+    }
+  });
 </script>

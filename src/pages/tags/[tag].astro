@@ -1,0 +1,114 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import PortfolioCard from '../../components/PortfolioCard.astro';
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('posts');
+  const portfolio = await getCollection('portfolio');
+
+  // 全タグを収集
+  const allTags = new Set<string>();
+  posts.forEach((post) => post.data.tags.forEach((tag) => allTags.add(tag)));
+  portfolio.forEach((project) => project.data.tags.forEach((tag) => allTags.add(tag)));
+
+  return Array.from(allTags).map((tag) => ({
+    params: { tag },
+    props: {
+      tag,
+      posts: posts.filter((post) => post.data.tags.includes(tag)),
+      portfolio: portfolio.filter((project) => project.data.tags.includes(tag)),
+    },
+  }));
+}
+
+const { tag, posts, portfolio } = Astro.props;
+
+// 日付順でソート
+const sortedPosts = posts.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+const sortedPortfolio = portfolio.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+---
+
+<BaseLayout title={`#${tag} - Astro Nightwalk`}>
+  <Header />
+
+  <main class="pt-20">
+    <!-- Hero Section -->
+    <section class="bg-gradient-to-b from-nightwalk-dark to-nightwalk-purple py-20">
+      <div class="container mx-auto px-4">
+        <a
+          href="/tags"
+          class="inline-flex items-center gap-2 text-white/60 hover:text-white mb-6 transition-colors"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          All Tags
+        </a>
+        <h1 class="text-4xl md:text-5xl font-bold text-white mb-6">#{tag}</h1>
+        <p class="text-xl text-white/80 max-w-2xl">
+          {sortedPosts.length} blog post{sortedPosts.length !== 1 ? 's' : ''} and {sortedPortfolio.length} portfolio project{sortedPortfolio.length !== 1 ? 's' : ''}
+        </p>
+      </div>
+    </section>
+
+    <!-- Blog Posts -->
+    {sortedPosts.length > 0 && (
+      <section class="py-16 bg-nightwalk-dark border-b border-white/10">
+        <div class="container mx-auto px-4">
+          <h2 class="text-2xl font-bold text-white mb-8">Blog Posts</h2>
+          <div class="max-w-3xl space-y-6">
+            {
+              sortedPosts.map((post) => (
+                <article class="bg-white/5 rounded-lg p-6 hover:bg-white/10 transition-colors">
+                  <a href={`/blog/${post.slug}`} class="block">
+                    <div class="flex flex-wrap items-center gap-4 text-sm text-white/60 mb-3">
+                      <time datetime={post.data.date.toISOString()}>
+                        {post.data.date.toLocaleDateString('ja-JP', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })}
+                      </time>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-2 hover:text-nightwalk-orange transition-colors">
+                      {post.data.title}
+                    </h3>
+                    <p class="text-white/70">{post.data.description}</p>
+                  </a>
+                </article>
+              ))
+            }
+          </div>
+        </div>
+      </section>
+    )}
+
+    <!-- Portfolio Projects -->
+    {sortedPortfolio.length > 0 && (
+      <section class="py-16 bg-nightwalk-dark">
+        <div class="container mx-auto px-4">
+          <h2 class="text-2xl font-bold text-white mb-8">Portfolio Projects</h2>
+          <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl">
+            {
+              sortedPortfolio.map((project) => (
+                <PortfolioCard
+                  title={project.data.title}
+                  description={project.data.description}
+                  slug={project.slug}
+                  image={project.data.image}
+                  tags={project.data.tags}
+                  featured={project.data.featured}
+                />
+              ))
+            }
+          </div>
+        </div>
+      </section>
+    )}
+  </main>
+
+  <Footer />
+</BaseLayout>

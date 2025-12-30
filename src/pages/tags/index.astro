@@ -1,0 +1,80 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import { getCollection } from 'astro:content';
+
+// 全コレクションからタグを収集
+const posts = await getCollection('posts');
+const portfolio = await getCollection('portfolio');
+
+// タグをカウント
+const tagCounts = new Map<string, { posts: number; portfolio: number }>();
+
+posts.forEach((post) => {
+  post.data.tags.forEach((tag) => {
+    const current = tagCounts.get(tag) || { posts: 0, portfolio: 0 };
+    current.posts++;
+    tagCounts.set(tag, current);
+  });
+});
+
+portfolio.forEach((project) => {
+  project.data.tags.forEach((tag) => {
+    const current = tagCounts.get(tag) || { posts: 0, portfolio: 0 };
+    current.portfolio++;
+    tagCounts.set(tag, current);
+  });
+});
+
+// カウント順でソート
+const sortedTags = Array.from(tagCounts.entries())
+  .sort((a, b) => {
+    const totalA = a[1].posts + a[1].portfolio;
+    const totalB = b[1].posts + b[1].portfolio;
+    return totalB - totalA;
+  });
+---
+
+<BaseLayout title="Tags - Astro Nightwalk">
+  <Header />
+
+  <main class="pt-20">
+    <!-- Hero Section -->
+    <section class="bg-gradient-to-b from-nightwalk-dark to-nightwalk-purple py-20">
+      <div class="container mx-auto px-4">
+        <h1 class="text-4xl md:text-5xl font-bold text-white mb-6">Tags</h1>
+        <p class="text-xl text-white/80 max-w-2xl">
+          Browse content by topic. {sortedTags.length} tags across blog posts and portfolio projects.
+        </p>
+      </div>
+    </section>
+
+    <!-- Tags Grid -->
+    <section class="py-16 bg-nightwalk-dark">
+      <div class="container mx-auto px-4">
+        <div class="max-w-4xl mx-auto">
+          <div class="flex flex-wrap gap-4">
+            {
+              sortedTags.map(([tag, counts]) => (
+                <a
+                  href={`/tags/${tag}`}
+                  class="group bg-white/5 hover:bg-white/10 rounded-lg px-4 py-3 transition-colors"
+                >
+                  <span class="text-white group-hover:text-nightwalk-orange transition-colors font-medium">
+                    #{tag}
+                  </span>
+                  <span class="text-white/50 text-sm ml-2">
+                    {counts.posts + counts.portfolio}
+                  </span>
+                </a>
+              ))
+            }
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <Footer />
+</BaseLayout>

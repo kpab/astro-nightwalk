@@ -7,12 +7,50 @@
     scroll-behavior: smooth;
   }
 
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* Dark mode (default) */
   body {
     @apply bg-nightwalk-dark text-white antialiased;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
+
+  /* Focus styles for accessibility */
+  :focus-visible {
+    @apply outline-none ring-2 ring-nightwalk-orange ring-offset-2 ring-offset-nightwalk-dark;
+  }
+
+  /* Selection color */
+  ::selection {
+    @apply bg-nightwalk-orange/30 text-white;
+  }
+
 }
 
 @layer components {
+  /* Skip Link for accessibility */
+  .skip-link {
+    @apply absolute left-4 top-4 z-[100] -translate-y-16 rounded bg-nightwalk-orange px-4 py-2 text-white font-medium transition-transform duration-200;
+  }
+
+  .skip-link:focus {
+    @apply translate-y-0;
+  }
+
+  /* Hero scene */
   .hero-scene {
     @apply relative w-full h-screen overflow-hidden;
   }
@@ -23,5 +61,45 @@
 
   .hero-content {
     @apply absolute inset-0 flex flex-col items-center justify-center z-10;
+  }
+
+  /* Card hover effect */
+  .card-hover {
+    @apply transition-all duration-200 ease-out cursor-pointer;
+  }
+
+  .card-hover:hover {
+    @apply bg-white/10 border-white/20;
+  }
+
+  /* Button styles */
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-6 py-3 bg-nightwalk-orange text-white font-medium rounded-lg transition-all duration-200 ease-out cursor-pointer;
+  }
+
+  .btn-primary:hover {
+    @apply bg-nightwalk-orange/90 shadow-lg shadow-nightwalk-orange/25;
+  }
+
+  .btn-primary:focus-visible {
+    @apply ring-2 ring-nightwalk-orange ring-offset-2 ring-offset-nightwalk-dark;
+  }
+
+  /* Section container with responsive padding */
+  .section-container {
+    @apply container mx-auto px-4 md:px-6 lg:px-8;
+  }
+
+}
+
+@layer utilities {
+  /* Text balance for better readability */
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-nightwalk-orange to-nightwalk-gold bg-clip-text text-transparent;
   }
 }

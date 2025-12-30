@@ -7,6 +7,7 @@
       "@/*": ["src/*"]
     },
     "jsx": "react-jsx",
-    "jsxImportSource": "astro"
+    "jsxImportSource": "astro",
+    "noImplicitAny": false
   }
 }

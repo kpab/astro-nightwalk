@@ -20,6 +20,9 @@ const WINDOW_COLORS_WARM = [
   '#ffccaa', // オレンジ系
   '#ffddaa', // 薄いオレンジ
   '#ffaa88', // 夕焼けっぽい
+  '#ff8866', // 強い暖色
+  '#ffaa55', // アンバー
+  '#ffcc88', // 電球色
 ];
 
 const WINDOW_COLORS_COOL = [

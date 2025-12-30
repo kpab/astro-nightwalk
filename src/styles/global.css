@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-skyline-dark text-white antialiased;
+  }
+}
+
+@layer components {
+  .hero-scene {
+    @apply relative w-full h-screen overflow-hidden;
+  }
+
+  .hero-canvas {
+    @apply absolute inset-0 w-full h-full;
+  }
+
+  .hero-content {
+    @apply absolute inset-0 flex flex-col items-center justify-center z-10;
+  }
+}

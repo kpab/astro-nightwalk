@@ -1,0 +1,28 @@
+---
+// HeroScene.astro - Three.js街並みシーンのコンテナ
+---
+
+<div id="hero-canvas-container" class="hero-scene">
+  <canvas id="hero-canvas" class="hero-canvas"></canvas>
+  <div class="hero-content">
+    <slot />
+  </div>
+  <noscript>
+    <div class="absolute inset-0 bg-gradient-to-b from-skyline-dark via-skyline-purple to-skyline-orange">
+      <div class="hero-content">
+        <slot />
+      </div>
+    </div>
+  </noscript>
+</div>
+
+<script>
+  import { initCityScene } from '../three/CityScene';
+
+  const container = document.getElementById('hero-canvas-container');
+  const canvas = document.getElementById('hero-canvas') as HTMLCanvasElement;
+
+  if (canvas && container) {
+    initCityScene(canvas, container);
+  }
+</script>

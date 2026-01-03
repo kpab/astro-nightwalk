@@ -2,6 +2,7 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import PageHero from '../../components/PageHero.astro';
 import PortfolioCard from '../../components/PortfolioCard.astro';
 import { getCollection, type CollectionEntry } from 'astro:content';
 import { siteConfig } from '../../config/site.config';
@@ -21,15 +22,11 @@ const portfolio = allPortfolio.sort((a: CollectionEntry<'portfolio'>, b: Collect
   <Header />
 
   <main id="main-content" class="pt-20">
-    <!-- Hero Section -->
-    <section class="bg-gradient-to-b from-nightwalk-dark to-nightwalk-purple py-20">
-      <div class="section-container">
-        <h1 class="text-4xl md:text-5xl font-bold text-white mb-6">{siteConfig.portfolio.title}</h1>
-        <p class="text-xl text-white/80 max-w-2xl">
-          {siteConfig.portfolio.description}
-        </p>
-      </div>
-    </section>
+    <PageHero 
+      title={siteConfig.portfolio.title}
+      description={siteConfig.portfolio.description}
+      containerClass="section-container"
+    />
 
     <!-- Portfolio Grid -->
     <section class="py-16 bg-nightwalk-dark">
